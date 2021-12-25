@@ -70,7 +70,6 @@ test-suite hw3-stack-test
   build-depends:
       base >=4.7 && <5
     , deepseq
-    , hw3-stack
     , megaparsec
     , mtl
     , scientific ==0.3.7.0

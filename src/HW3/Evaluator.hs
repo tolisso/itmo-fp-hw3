@@ -6,6 +6,12 @@ import Control.Monad.Except
 
 type Status = ExceptT HiError Identity
 
+eval :: HiExpr -> Either HiError HiValue 
+eval ex = convertM $ evalM ex
+
+convertM :: Status HiValue -> Either HiError HiValue
+convertM (ExceptT (Identity v)) = v
+
 evalM :: HiExpr -> Status HiValue 
 evalM (HiExprValue v) = return v
 evalM (HiExprApply f args) = do

@@ -54,5 +54,5 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - hw3-stack
+      # - hw3-stack
       - megaparsec

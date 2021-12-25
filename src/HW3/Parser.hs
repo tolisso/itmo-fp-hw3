@@ -3,12 +3,13 @@
 module HW3.Parser where
 
 import Data.Scientific (toRealFloat)
-import Data.Text
+import Data.String
 import Data.Void
 import HW3.Base
 import Text.Megaparsec
 import Text.Megaparsec.Char as C
 import Text.Megaparsec.Char.Lexer as L
+import Data.Text
 
 type Parser = Parsec Void Text
 
@@ -60,6 +61,7 @@ args = do
       spaced ")"
       return $ [v] ++ x
 
+simpleExpr :: Parser HiExpr
 simpleExpr = number <|> funcName
 
 expr :: Parser HiExpr
