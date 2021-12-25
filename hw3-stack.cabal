@@ -1,0 +1,78 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           hw3-stack
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/hw3-stack#readme>
+homepage:       https://github.com/githubuser/hw3-stack#readme
+bug-reports:    https://github.com/githubuser/hw3-stack/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2021 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/hw3-stack
+
+library
+  exposed-modules:
+      HW3.Base
+      HW3.Evaluator
+      HW3.Parser
+      Lib
+  other-modules:
+      Paths_hw3_stack
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , megaparsec
+    , mtl
+    , scientific ==0.3.7.0
+    , text
+  default-language: Haskell2010
+
+executable hw3-stack-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_hw3_stack
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , hw3-stack
+    , megaparsec
+    , mtl
+    , scientific ==0.3.7.0
+    , text
+  default-language: Haskell2010
+
+test-suite hw3-stack-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_hw3_stack
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , deepseq
+    , hw3-stack
+    , megaparsec
+    , mtl
+    , scientific ==0.3.7.0
+    , text
+  default-language: Haskell2010
