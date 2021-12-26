@@ -29,6 +29,7 @@ library
       HW3.Evaluator
       HW3.Parser
       HW3.Pretty
+      HW3.Util
       Lib
   other-modules:
       Paths_hw3_stack

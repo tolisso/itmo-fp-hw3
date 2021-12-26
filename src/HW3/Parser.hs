@@ -9,7 +9,7 @@ import HW3.Base
 import Text.Megaparsec
 import Text.Megaparsec.Char as C
 import Text.Megaparsec.Char.Lexer as L
-import Data.Text
+import Data.Text hiding (foldr)
 
 type Parser = Parsec Void Text
 
@@ -24,11 +24,26 @@ negScientific = do
   n <- scientific
   return (-n)
 
+pEmpty :: Parser a
+pEmpty = do
+  fail "empty parser"
+
 number :: Parser HiExpr
 number = do
   n <- (negScientific <|> scientific)
   C.space
   return $ HiExprValue $ HiValueNumber (toRational n)
+
+bool :: Parser HiExpr
+bool = do
+  b <- bool'
+  return $ HiExprValue (HiValueBool b)
+
+bool' :: Parser Bool
+bool' = 
+  do {string "true"; return True} 
+  <|>
+  do {string "false"; return False}
 
 valFunc :: Text -> HiFun -> Parser HiExpr
 valFunc s n = do
@@ -37,10 +52,10 @@ valFunc s n = do
 
 funcName :: Parser HiExpr
 funcName =
-  valFunc "add" HiFunAdd
-    <|> valFunc "sub" HiFunSub
-    <|> valFunc "mul" HiFunMul
-    <|> valFunc "div" HiFunDiv
+  foldr 
+    (\v acc -> valFunc (snd v) (fst v) <|> acc) 
+    pEmpty
+    funcInfo 
 
 func :: HiExpr -> Parser HiExpr
 func head = do
