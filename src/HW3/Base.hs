@@ -60,7 +60,7 @@ numArgs HiFunEquals = 2
 numArgs HiFunNotLessThan = 2
 numArgs HiFunNotGreaterThan = 2
 numArgs HiFunNotEquals = 2
-numArgs HiFunIf = 2
+numArgs HiFunIf = 3
 
 -- constructor, str-to-parse
 funcInfo :: [(HiFun, Text)]

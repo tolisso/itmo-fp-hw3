@@ -16,8 +16,29 @@ evalM :: HiExpr -> Status HiValue
 evalM (HiExprValue v) = return v
 evalM (HiExprApply f args) = do
     fr <- evalM f
-    values <- traverse (\v -> evalM v) args
-    apply fr values
+    if reduced fr then do
+        values <- traverse (\v -> evalM v) args
+        apply fr values
+    else
+        applyFull fr args
+
+applyFull :: HiValue -> [HiExpr] -> Status HiValue
+applyFull (HiValueFunction HiFunIf) [condExpr, a, b] = do
+    cond <- evalM condExpr
+    applyIf cond where
+        applyIf (HiValueBool True) = evalM a
+        applyIf (HiValueBool False) = evalM b
+        applyIf _ = throwError HiErrorInvalidArgument
+
+applyFull (HiValueFunction f) args = do
+    check (length args == numArgs f) HiErrorArityMismatch
+    throwError HiErrorInvalidArgument
+applyFull _ _ = throwError HiErrorInvalidFunction
+
+
+reduced :: HiValue -> Bool
+reduced (HiValueFunction HiFunIf) = False
+reduced _ = True
 
 apply :: HiValue -> [HiValue] -> Status HiValue
 apply (HiValueFunction HiFunAdd) [(HiValueNumber a), (HiValueNumber b)] = do
@@ -35,6 +56,7 @@ apply (HiValueFunction HiFunAnd) [(HiValueBool a), (HiValueBool b)] = do
     return (HiValueBool (a && b))
 apply (HiValueFunction HiFunOr) [(HiValueBool a), (HiValueBool b)] = do
     return (HiValueBool (a || b))
+
 apply (HiValueFunction f) args = do
     check (length args == numArgs f) HiErrorArityMismatch
     throwError HiErrorInvalidArgument

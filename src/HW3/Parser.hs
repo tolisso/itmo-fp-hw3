@@ -88,4 +88,6 @@ expr :: Parser HiExpr
 expr =
   do
     x <- simpleExpr
-    func x <|> return x
+    expr' x
+  where
+    expr' head = do {y <- func head; expr' y} <|> return head
