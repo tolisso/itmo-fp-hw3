@@ -82,10 +82,10 @@ args = do
       return $ [v] ++ x
 
 simpleExpr :: Parser HiExpr
-simpleExpr = number <|> funcName
+simpleExpr = number <|> funcName <|> bool
 
 expr :: Parser HiExpr
 expr =
   do
-    x <- simpleExpr <|> expr
+    x <- simpleExpr
     func x <|> return x

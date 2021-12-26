@@ -69,14 +69,17 @@ funcInfo = [
   (HiFunSub,            "sub"), 
   (HiFunMul,            "mul"), 
   (HiFunDiv,            "div"),
+
   (HiFunNot,            "not"),
   (HiFunAnd,            "and"),
   (HiFunOr,             "or"),
+
   (HiFunLessThan,       "less-than"),
   (HiFunGreaterThan,    "greater-then"),
   (HiFunEquals,         "equals"),
   (HiFunNotLessThan,    "not-less-then"),
   (HiFunNotGreaterThan, "not-greater-then"),
   (HiFunNotEquals,      "not-equals"),
+
   (HiFunIf,             "if")
   ]

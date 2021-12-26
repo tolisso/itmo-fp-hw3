@@ -26,8 +26,9 @@ prettyValue (HiValueNumber a)
         if (d) /= 0 
             then pretty d <+> pretty sign <+> pretty frac
             else pretty $ signWeak ++ frac
+prettyValue (HiValueBool True) = pretty "true"
+prettyValue (HiValueBool False) = pretty "false"
         
-
 prettyValue _ = error "not implemented yet"
 
 isPow10 :: Rational -> Bool

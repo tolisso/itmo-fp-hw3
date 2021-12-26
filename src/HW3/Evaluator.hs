@@ -28,6 +28,13 @@ apply (HiValueFunction HiFunMul) [(HiValueNumber a), (HiValueNumber b)] = do
     return (HiValueNumber (a * b))
 apply (HiValueFunction HiFunDiv) [(HiValueNumber a), (HiValueNumber b)] = do
     return (HiValueNumber (a / b))
+
+apply (HiValueFunction HiFunNot) [(HiValueBool a)] = do
+    return (HiValueBool (not a))
+apply (HiValueFunction HiFunAnd) [(HiValueBool a), (HiValueBool b)] = do
+    return (HiValueBool (a && b))
+apply (HiValueFunction HiFunOr) [(HiValueBool a), (HiValueBool b)] = do
+    return (HiValueBool (a || b))
 apply (HiValueFunction f) args = do
     check (length args == numArgs f) HiErrorArityMismatch
     throwError HiErrorInvalidArgument
