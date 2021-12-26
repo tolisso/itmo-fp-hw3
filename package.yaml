@@ -26,6 +26,8 @@ dependencies:
   - text
   - scientific == 0.3.7.0
   - mtl
+  - prettyprinter
+  - prettyprinter-ansi-terminal
 
 library:
   source-dirs: src
@@ -44,6 +46,8 @@ executables:
       - text
       - scientific == 0.3.7.0
       - mtl
+      - prettyprinter
+      - prettyprinter-ansi-terminal
 
 tests:
   hw3-stack-test:

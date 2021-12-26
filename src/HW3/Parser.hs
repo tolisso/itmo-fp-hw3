@@ -19,9 +19,14 @@ spaced s = do
   C.space
   return ()
   
+negScientific = do
+  spaced "-"
+  n <- scientific
+  return (-n)
+
 number :: Parser HiExpr
 number = do
-  n <- L.scientific
+  n <- (negScientific <|> scientific)
   C.space
   return $ HiExprValue $ HiValueNumber (toRational n)
 

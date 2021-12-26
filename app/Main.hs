@@ -12,9 +12,13 @@ import HW3.Parser
 import Lib
 import Text.Megaparsec
 import HW3.Evaluator
+import HW3.Pretty
 
 parser :: Parser HiExpr
-parser = expr
+parser = do 
+  e <- expr
+  eof
+  return e
 
 main :: IO ()
 main = do
@@ -29,4 +33,4 @@ main = do
     where
       eval' :: Either (ParseErrorBundle Text Void) HiExpr -> IO() 
       eval' (Left s) = print s
-      eval' (Right v) = print (eval v)
+      eval' (Right v) = print (prettyValue <$> eval v)

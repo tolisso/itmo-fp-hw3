@@ -28,6 +28,7 @@ library
       HW3.Base
       HW3.Evaluator
       HW3.Parser
+      HW3.Pretty
       Lib
   other-modules:
       Paths_hw3_stack
@@ -38,6 +39,8 @@ library
     , deepseq
     , megaparsec
     , mtl
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , scientific ==0.3.7.0
     , text
   default-language: Haskell2010
@@ -55,6 +58,8 @@ executable hw3-stack-exe
     , hw3-stack
     , megaparsec
     , mtl
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , scientific ==0.3.7.0
     , text
   default-language: Haskell2010
@@ -72,6 +77,8 @@ test-suite hw3-stack-test
     , deepseq
     , megaparsec
     , mtl
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , scientific ==0.3.7.0
     , text
   default-language: Haskell2010
