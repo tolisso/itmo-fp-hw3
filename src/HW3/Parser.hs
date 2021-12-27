@@ -63,23 +63,7 @@ func head = do
   return $ HiExprApply head body
 
 args :: Parser [HiExpr]
-args = do
-  spaced "("
-  emptyP <|> nonemptyP
-  
-  where
-    emptyP :: Parser [HiExpr]
-    emptyP = do 
-      spaced ")"
-      return []
-    nonemptyP :: Parser [HiExpr]
-    nonemptyP = do
-      v <- expr
-      x <- many $ do
-        spaced ","
-        expr
-      spaced ")"
-      return $ [v] ++ x
+args = between (spaced "(") (spaced ")") (sepBy expr (spaced ","))
 
 simpleExpr :: Parser HiExpr
 simpleExpr = number <|> funcName <|> bool
