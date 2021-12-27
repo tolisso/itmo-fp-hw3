@@ -6,14 +6,20 @@ import Data.Ratio (numerator, denominator)
 import Data.Scientific
     
 prettyValue :: HiValue -> (Doc AnsiStyle)
+
+-- number
+    -- denminator is 1
 prettyValue (HiValueNumber a)
     | denominator a == 1
     = pretty (numerator a)
+
+    -- denominator is ten power
 prettyValue (HiValueNumber a)
     | isPow10 a
     = pretty $ formatScientific Fixed Nothing 
         (normalize . fst . fromRationalRepetendUnlimited $ a)
-        
+
+    -- standard rational
 prettyValue (HiValueNumber a)
     = let 
         num = numerator a
@@ -26,10 +32,13 @@ prettyValue (HiValueNumber a)
         if (d) /= 0 
             then pretty d <+> pretty sign <+> pretty frac
             else pretty $ signWeak ++ frac
+
+-- bool
 prettyValue (HiValueBool True) = pretty "true"
 prettyValue (HiValueBool False) = pretty "false"
-        
-prettyValue _ = error "not implemented yet"
+
+-- function
+prettyValue (HiValueFunction f) = pretty $ funcStr f
 
 isPow10 :: Rational -> Bool
 isPow10 a = isInf (fromRationalRepetendUnlimited a) where

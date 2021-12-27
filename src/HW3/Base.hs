@@ -26,7 +26,7 @@ data HiFun
 
   -- conditional
   | HiFunIf
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
 data HiValue
   = HiValueNumber Rational
@@ -46,40 +46,45 @@ data HiError
   | HiErrorDivideByZero
   deriving (Show)
 
+funcInfo :: HiFun -> (Int, Text)
+funcInfo HiFunAdd = (2, "add")
+funcInfo HiFunSub = (2, "sub")
+funcInfo HiFunMul = (2, "mul")
+funcInfo HiFunDiv = (2, "div")
+funcInfo HiFunNot = (1, "not")
+funcInfo HiFunAnd = (2, "and")
+funcInfo HiFunOr = (2, "or")
+funcInfo HiFunLessThan = (2, "less-than")
+funcInfo HiFunGreaterThan = (2, "greater-then")
+funcInfo HiFunEquals = (2, "equals")
+funcInfo HiFunNotLessThan = (2, "not-less-then")
+funcInfo HiFunNotGreaterThan = (2, "not-greater-then")
+funcInfo HiFunNotEquals = (2, "not-equals")
+funcInfo HiFunIf = (3, "if")
+
 numArgs :: HiFun -> Int
-numArgs HiFunAdd = 2
-numArgs HiFunSub = 2
-numArgs HiFunMul = 2
-numArgs HiFunDiv = 2
-numArgs HiFunNot = 1
-numArgs HiFunAnd = 2
-numArgs HiFunOr = 2
-numArgs HiFunLessThan = 2
-numArgs HiFunGreaterThan = 2
-numArgs HiFunEquals = 2
-numArgs HiFunNotLessThan = 2
-numArgs HiFunNotGreaterThan = 2
-numArgs HiFunNotEquals = 2
-numArgs HiFunIf = 3
+numArgs = fst . funcInfo
 
--- constructor, str-to-parse
-funcInfo :: [(HiFun, Text)]
-funcInfo = [ 
-  (HiFunAdd,            "add"), 
-  (HiFunSub,            "sub"), 
-  (HiFunMul,            "mul"), 
-  (HiFunDiv,            "div"),
+funcStr :: HiFun -> Text
+funcStr = snd . funcInfo
 
-  (HiFunNot,            "not"),
-  (HiFunAnd,            "and"),
-  (HiFunOr,             "or"),
+funcs :: [HiFun]
+funcs = [ 
+  HiFunAdd,
+  HiFunSub,
+  HiFunMul,
+  HiFunDiv,
 
-  (HiFunLessThan,       "less-than"),
-  (HiFunGreaterThan,    "greater-then"),
-  (HiFunEquals,         "equals"),
-  (HiFunNotLessThan,    "not-less-then"),
-  (HiFunNotGreaterThan, "not-greater-then"),
-  (HiFunNotEquals,      "not-equals"),
+  HiFunNot,
+  HiFunAnd,
+  HiFunOr,
 
-  (HiFunIf,             "if")
+  HiFunLessThan,
+  HiFunGreaterThan,
+  HiFunEquals,
+  HiFunNotLessThan,
+  HiFunNotGreaterThan,
+  HiFunNotEquals,
+
+  HiFunIf
   ]

@@ -38,6 +38,7 @@ library
   build-depends:
       base >=4.7 && <5
     , deepseq
+    , haskeline
     , megaparsec
     , mtl
     , prettyprinter
@@ -56,6 +57,7 @@ executable hw3-stack-exe
   build-depends:
       base >=4.7 && <5
     , deepseq
+    , haskeline
     , hw3-stack
     , megaparsec
     , mtl
@@ -76,6 +78,7 @@ test-suite hw3-stack-test
   build-depends:
       base >=4.7 && <5
     , deepseq
+    , haskeline
     , megaparsec
     , mtl
     , prettyprinter

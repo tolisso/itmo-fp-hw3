@@ -53,9 +53,9 @@ valFunc s n = do
 funcName :: Parser HiExpr
 funcName =
   foldr 
-    (\v acc -> valFunc (snd v) (fst v) <|> acc) 
+    (\v acc -> valFunc (funcStr v) v <|> acc) 
     pEmpty
-    funcInfo 
+    funcs
 
 func :: HiExpr -> Parser HiExpr
 func head = do

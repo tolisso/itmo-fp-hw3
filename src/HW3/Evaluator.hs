@@ -3,6 +3,7 @@ import HW3.Base
 import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.Except
+import Control.Applicative (liftA2)
 
 type Status = ExceptT HiError Identity
 
@@ -57,12 +58,45 @@ apply (HiValueFunction HiFunAnd) [(HiValueBool a), (HiValueBool b)] = do
 apply (HiValueFunction HiFunOr) [(HiValueBool a), (HiValueBool b)] = do
     return (HiValueBool (a || b))
 
+apply (HiValueFunction HiFunEquals) [a, b] = do
+    return . HiValueBool $ equals a b
+        
+apply (HiValueFunction HiFunLessThan) [a, b] =
+    return . HiValueBool $ lz a b
+        
+apply (HiValueFunction HiFunNotLessThan) [a, b] = 
+    return . HiValueBool . not $ lz a b
+
+apply (HiValueFunction HiFunNotGreaterThan) [a, b] = 
+    return . HiValueBool $ ngz a b
+
+apply (HiValueFunction HiFunGreaterThan) [a, b] = 
+    return . HiValueBool . not $ ngz a b
+
 apply (HiValueFunction f) args = do
     check (length args == numArgs f) HiErrorArityMismatch
     throwError HiErrorInvalidArgument
+
 apply _ _ = throwError HiErrorInvalidFunction
 
 
 check :: Bool -> HiError -> Status ()
 check cond err = do
     unless cond $ throwError err
+
+lz :: HiValue -> HiValue -> Bool
+lz (HiValueNumber x) (HiValueNumber y) = (x < y)
+lz (HiValueBool x) (HiValueBool y) = (x < y)
+lz (HiValueFunction x) (HiValueFunction y) = (x < y)
+lz (HiValueFunction _) _ = True
+lz (HiValueBool _) (HiValueNumber _) = True
+lz _ _ = False
+
+equals :: HiValue -> HiValue -> Bool
+equals (HiValueNumber x) (HiValueNumber y) = (x == y)
+equals (HiValueBool x) (HiValueBool y) = (x == y)
+equals (HiValueFunction x) (HiValueFunction y) = (x == y)
+equals _ _ = False
+
+ngz :: HiValue -> HiValue -> Bool
+ngz a b = (lz a b) || (equals a b)

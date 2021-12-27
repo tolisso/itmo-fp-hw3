@@ -13,6 +13,7 @@ import Lib
 import Text.Megaparsec
 import HW3.Evaluator
 import HW3.Pretty
+import System.Console.Haskeline 
 
 parser :: Parser HiExpr
 parser = do 
@@ -20,17 +21,22 @@ parser = do
   eof
   return e
 
-main :: IO ()
-main = do
-  -- putStrLn "as"
-  input <-
-    putStr "REPL> "
-      >> hFlush stdout
-      >> getLine
-
-  unless (input == ":quit") $
-    eval' (parse parser "aba" (pack input)) >> main
+getResult :: String -> InputT IO ()
+getResult input = eval' (parse parser "aba" (pack input))
     where
-      eval' :: Either (ParseErrorBundle Text Void) HiExpr -> IO() 
-      eval' (Left s) = print s
-      eval' (Right v) = print (prettyValue <$> eval v)
+      eval' :: Either (ParseErrorBundle Text Void) HiExpr -> InputT IO() 
+      eval' (Left s) = outputStrLn (show s)
+      eval' (Right v) = either printRes printRes (prettyValue <$> eval v) where
+        printRes v = outputStrLn $ show v
+
+main :: IO ()
+main = runInputT defaultSettings loop
+   where
+       loop :: InputT IO ()
+       loop = do
+           minput <- getInputLine "hi> "
+           case minput of
+               Nothing -> return ()
+               Just "quit" -> return ()
+               Just input -> do getResult input
+                                loop

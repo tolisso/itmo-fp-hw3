@@ -28,6 +28,7 @@ dependencies:
   - mtl
   - prettyprinter
   - prettyprinter-ansi-terminal
+  - haskeline
 
 library:
   source-dirs: src
@@ -48,6 +49,7 @@ executables:
       - mtl
       - prettyprinter
       - prettyprinter-ansi-terminal
+      - haskeline
 
 tests:
   hw3-stack-test:
