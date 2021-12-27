@@ -72,32 +72,47 @@ funcs =
     HiFunSub,
     HiFunMul,
     HiFunDiv,
+    HiFunNotLessThan,
+    HiFunNotGreaterThan,
+    HiFunNotEquals,
     HiFunNot,
     HiFunAnd,
     HiFunOr,
     HiFunLessThan,
     HiFunGreaterThan,
     HiFunEquals,
-    HiFunNotLessThan,
-    HiFunNotGreaterThan,
-    HiFunNotEquals,
     HiFunIf
   ]
+
+isLeftAssoc :: Int -> Bool
+isLeftAssoc 2 = False
+isLeftAssoc 3 = False
+isLeftAssoc _ = True
 
 getOperators :: Int -> [Text]
 getOperators 0 = []
 getOperators 1 = []
-getOperators 2 = []
-getOperators 3 = []
-getOperators 4 = []
+getOperators 2 = ["||"]
+getOperators 3 = ["&&"]
+getOperators 4 = ["==", "/=", "<=", ">=", "<", ">"]
 getOperators 5 = []
-getOperators 6 = []
-getOperators 7 = []
+getOperators 6 = ["+", "-"]
+getOperators 7 = ["/", "*"]
 getOperators 8 = []
-getOperators 9 = ["+", "-"]
+getOperators 9 = []
 getOperators x = error ("No such operator priority: " ++ show x)
 
 opToFun :: Text -> HiFun
 opToFun "+" = HiFunAdd
 opToFun "-" = HiFunSub
+opToFun "/" = HiFunDiv
+opToFun "*" = HiFunMul
+opToFun "==" = HiFunEquals
+opToFun "/=" = HiFunNotEquals
+opToFun ">" = HiFunGreaterThan
+opToFun ">=" = HiFunNotLessThan
+opToFun "<=" = HiFunNotGreaterThan
+opToFun "<" = HiFunLessThan
+opToFun "&&" = HiFunAnd
+opToFun "||" = HiFunOr
 opToFun x = error ("No such operator: " ++ show x)

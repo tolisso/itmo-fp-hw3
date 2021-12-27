@@ -2,7 +2,7 @@
 
 module HW3.Parser where
 
-import Data.Scientific (toRealFloat)
+import Data.Scientific (Scientific, toRealFloat)
 import Data.String
 import Data.Text hiding (foldr, map)
 import Data.Void
@@ -25,6 +25,7 @@ spacedStr s = do
   C.space
   return x
 
+negScientific :: Parser Scientific
 negScientific = do
   spaced "-"
   n <- scientific
@@ -47,8 +48,8 @@ bool = do
 
 bool' :: Parser Bool
 bool' =
-  do string "true"; return True
-    <|> do string "false"; return False
+  do spaced "true"; return True
+    <|> do spaced "false"; return False
 
 valFunc :: Text -> HiFun -> Parser HiExpr
 valFunc s n = do
@@ -68,38 +69,58 @@ func head = do
   return $ HiExprApply head body
 
 args :: Parser [HiExpr]
-args = between (spaced "(") (spaced ")") (sepBy expr (spaced ","))
+args = between (spaced "(") (spaced ")") (sepBy mainExpr (spaced ","))
 
 simpleExpr :: Parser HiExpr
 simpleExpr = number <|> funcName <|> bool
 
 expr :: Parser HiExpr
 expr =
-  do
-    x <- simpleExpr
-    expr' x
+  bracketMainExpr
+    <|> do
+      x <- simpleExpr
+      expr' x
   where
     expr' head = do { y <- func head; expr' y } <|> return head
 
 oprExpr :: Int -> Parser HiExpr
 oprExpr 10 = expr
 oprExpr y = do
-  x <- oprExpr (y + 1)
+  x <- termParser
   lamb <- oprExpr'
   return $ lamb x
   where
+    termParser = oprExpr (y + 1)
+    -- operators on current level
     ops = getOperators y
-    parseOps :: Parser Text
-    parseOps = foldr (\x acc -> spacedStr x <|> acc) pEmpty ops
-    oprExpr' :: Parser (HiExpr -> HiExpr)
+    -- helper function to convert `Text` to function
+    textToFun f = (HiExprValue . HiValueFunction . opToFun $ f)
+    -- recursive right side parser
+    oprExprNext :: Parser (HiExpr -> HiExpr)
     oprExprNext =
       do
-        f <- parseOps
-        ex <- oprExpr (y + 1)
+        f <- parseOps y
+        ex <- termParser
         lamb <- oprExpr'
-        return $ \outer ->
-          lamb $
+        if (isLeftAssoc y)
+          then return $ \outer ->
+            lamb $
+              HiExprApply
+                (textToFun f)
+                [outer, ex]
+          else return $ \outer ->
             HiExprApply
-              (HiExprValue . HiValueFunction . opToFun $ f)
-              [outer, ex]
+              (textToFun f)
+              ([outer, lamb ex])
+    -- parser's main body
+    oprExpr' :: Parser (HiExpr -> HiExpr)
     oprExpr' = try oprExprNext <|> return id
+
+parseOps :: Int -> Parser Text
+parseOps y = foldr (\x acc -> spacedStr x <|> acc) pEmpty (getOperators y)
+
+mainExpr :: Parser HiExpr
+mainExpr = oprExpr 0
+
+bracketMainExpr :: Parser HiExpr
+bracketMainExpr = between (spaced "(") (spaced ")") mainExpr

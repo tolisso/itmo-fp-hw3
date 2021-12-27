@@ -17,7 +17,7 @@ import Text.Megaparsec
 
 parser :: Parser HiExpr
 parser = do
-  e <- oprExpr 9
+  e <- mainExpr
   eof
   return e
 
