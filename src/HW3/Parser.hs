@@ -4,12 +4,12 @@ module HW3.Parser where
 
 import Data.Scientific (toRealFloat)
 import Data.String
+import Data.Text hiding (foldr, map)
 import Data.Void
 import HW3.Base
 import Text.Megaparsec
 import Text.Megaparsec.Char as C
 import Text.Megaparsec.Char.Lexer as L
-import Data.Text hiding (foldr)
 
 type Parser = Parsec Void Text
 
@@ -18,11 +18,17 @@ spaced s = do
   string s
   C.space
   return ()
-  
+
+spacedStr :: Text -> Parser Text
+spacedStr s = do
+  x <- string s
+  C.space
+  return x
+
 negScientific = do
   spaced "-"
   n <- scientific
-  return (-n)
+  return (- n)
 
 pEmpty :: Parser a
 pEmpty = do
@@ -40,10 +46,9 @@ bool = do
   return $ HiExprValue (HiValueBool b)
 
 bool' :: Parser Bool
-bool' = 
-  do {string "true"; return True} 
-  <|>
-  do {string "false"; return False}
+bool' =
+  do string "true"; return True
+    <|> do string "false"; return False
 
 valFunc :: Text -> HiFun -> Parser HiExpr
 valFunc s n = do
@@ -52,8 +57,8 @@ valFunc s n = do
 
 funcName :: Parser HiExpr
 funcName =
-  foldr 
-    (\v acc -> valFunc (funcStr v) v <|> acc) 
+  foldr
+    (\v acc -> valFunc (funcStr v) v <|> acc)
     pEmpty
     funcs
 
@@ -74,4 +79,27 @@ expr =
     x <- simpleExpr
     expr' x
   where
-    expr' head = do {y <- func head; expr' y} <|> return head
+    expr' head = do { y <- func head; expr' y } <|> return head
+
+oprExpr :: Int -> Parser HiExpr
+oprExpr 10 = expr
+oprExpr y = do
+  x <- oprExpr (y + 1)
+  lamb <- oprExpr'
+  return $ lamb x
+  where
+    ops = getOperators y
+    parseOps :: Parser Text
+    parseOps = foldr (\x acc -> spacedStr x <|> acc) pEmpty ops
+    oprExpr' :: Parser (HiExpr -> HiExpr)
+    oprExprNext =
+      do
+        f <- parseOps
+        ex <- oprExpr (y + 1)
+        lamb <- oprExpr'
+        return $ \outer ->
+          lamb $
+            HiExprApply
+              (HiExprValue . HiValueFunction . opToFun $ f)
+              [outer, ex]
+    oprExpr' = try oprExprNext <|> return id

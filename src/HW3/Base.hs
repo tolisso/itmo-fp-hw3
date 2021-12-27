@@ -1,31 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module HW3.Base where
-import GHC.Natural
+
 import Data.Text
+import GHC.Natural
 
 data HiFun
-  -- number
-  = HiFunAdd
+  = -- number
+    HiFunAdd
   | HiFunSub
   | HiFunMul
   | HiFunDiv
-
-  -- bool
-  | HiFunNot
+  | -- bool
+    HiFunNot
   | HiFunAnd
   | HiFunOr
-
-  -- compare
-  | HiFunLessThan
+  | -- compare
+    HiFunLessThan
   | HiFunGreaterThan
   | HiFunEquals
   | HiFunNotLessThan
   | HiFunNotGreaterThan
   | HiFunNotEquals
-
-  -- conditional
-  | HiFunIf
+  | -- conditional
+    HiFunIf
   deriving (Show, Eq, Ord)
 
 data HiValue
@@ -69,22 +67,37 @@ funcStr :: HiFun -> Text
 funcStr = snd . funcInfo
 
 funcs :: [HiFun]
-funcs = [ 
-  HiFunAdd,
-  HiFunSub,
-  HiFunMul,
-  HiFunDiv,
-
-  HiFunNot,
-  HiFunAnd,
-  HiFunOr,
-
-  HiFunLessThan,
-  HiFunGreaterThan,
-  HiFunEquals,
-  HiFunNotLessThan,
-  HiFunNotGreaterThan,
-  HiFunNotEquals,
-
-  HiFunIf
+funcs =
+  [ HiFunAdd,
+    HiFunSub,
+    HiFunMul,
+    HiFunDiv,
+    HiFunNot,
+    HiFunAnd,
+    HiFunOr,
+    HiFunLessThan,
+    HiFunGreaterThan,
+    HiFunEquals,
+    HiFunNotLessThan,
+    HiFunNotGreaterThan,
+    HiFunNotEquals,
+    HiFunIf
   ]
+
+getOperators :: Int -> [Text]
+getOperators 0 = []
+getOperators 1 = []
+getOperators 2 = []
+getOperators 3 = []
+getOperators 4 = []
+getOperators 5 = []
+getOperators 6 = []
+getOperators 7 = []
+getOperators 8 = []
+getOperators 9 = ["+", "-"]
+getOperators x = error ("No such operator priority: " ++ show x)
+
+opToFun :: Text -> HiFun
+opToFun "+" = HiFunAdd
+opToFun "-" = HiFunSub
+opToFun x = error ("No such operator: " ++ show x)
