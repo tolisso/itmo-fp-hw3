@@ -4,6 +4,7 @@ import Control.Applicative (liftA2)
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Trans
+import Data.Text as T
 import HW3.Base
 
 type Status = ExceptT HiError Identity
@@ -63,7 +64,7 @@ applyFull (HiValueFunction HiFunOr) [a, b] = do
       return . HiValueBool . isTrue $ rb
 -- other
 applyFull (HiValueFunction f) args = do
-  check (length args == numArgs f) HiErrorArityMismatch
+  check (Prelude.length args == numArgs f) HiErrorArityMismatch
   throwError HiErrorInvalidArgument
 applyFull _ _ = throwError HiErrorInvalidFunction
 
@@ -82,20 +83,33 @@ apply (HiValueFunction HiFunNot) [(HiValueBool a)] =
   return (HiValueBool (not a))
 -- compare
 apply (HiValueFunction HiFunEquals) [a, b] =
-  return . HiValueBool $ equals a b
+  HiValueBool <$> equals a b
 apply (HiValueFunction HiFunNotEquals) [a, b] =
-  return . HiValueBool $ not (equals a b)
+  HiValueBool . not <$> (equals a b)
 apply (HiValueFunction HiFunLessThan) [a, b] =
-  return . HiValueBool $ lz a b
+  HiValueBool <$> lz a b
 apply (HiValueFunction HiFunNotLessThan) [a, b] =
-  return . HiValueBool . not $ lz a b
+  HiValueBool . not <$> lz a b
 apply (HiValueFunction HiFunNotGreaterThan) [a, b] =
-  return . HiValueBool $ ngz a b
+  HiValueBool <$> ngz a b
 apply (HiValueFunction HiFunGreaterThan) [a, b] =
-  return . HiValueBool . not $ ngz a b
+  HiValueBool . not <$> ngz a b
+-- string
+apply (HiValueFunction HiFunLength) [(HiValueString s)] =
+  return . HiValueNumber . toRational $ T.length s
+apply (HiValueFunction HiFunToUpper) [(HiValueString s)] =
+  return . HiValueString $ T.toUpper s
+apply (HiValueFunction HiFunToLower) [(HiValueString s)] =
+  return . HiValueString $ T.toLower s
+apply (HiValueFunction HiFunReverse) [(HiValueString s)] =
+  return . HiValueString $ T.reverse s
+apply (HiValueFunction HiFunTrim) [(HiValueString s)] =
+  return . HiValueString $ T.strip s
+apply (HiValueFunction HiFunToUpper) [(HiValueString s)] =
+  return . HiValueString $ T.toUpper s
 -- other
 apply (HiValueFunction f) args = do
-  check (length args == numArgs f) HiErrorArityMismatch
+  check (Prelude.length args == numArgs f) HiErrorArityMismatch
   throwError HiErrorInvalidArgument
 apply _ _ = throwError HiErrorInvalidFunction
 
@@ -105,20 +119,27 @@ check cond err =
   unless cond $ throwError err
 
 -- lower-then
-lz :: HiValue -> HiValue -> Bool
-lz (HiValueNumber x) (HiValueNumber y) = (x < y)
-lz (HiValueBool x) (HiValueBool y) = (x < y)
-lz (HiValueFunction x) (HiValueFunction y) = (x < y)
-lz (HiValueFunction _) _ = True
-lz (HiValueBool _) (HiValueNumber _) = True
-lz _ _ = False
+lz :: HiValue -> HiValue -> Status Bool
+lz (HiValueNumber x) (HiValueNumber y) = return (x < y)
+lz (HiValueBool x) (HiValueBool y) = return (x < y)
+lz (HiValueFunction x) (HiValueFunction y) = return (x < y)
+lz (HiValueFunction _) _ = return True
+lz (HiValueBool _) (HiValueNumber _) = return True
+lz (HiValueString x) (HiValueString y) = return $ x < y
+lz (HiValueString _) _ = throwError HiErrorInvalidArgument
+lz _ (HiValueString _) = throwError HiErrorInvalidArgument
+lz _ HiValueNull = throwError HiErrorInvalidArgument
+lz HiValueNull _ = throwError HiErrorInvalidArgument
+lz _ _ = return False
 
-equals :: HiValue -> HiValue -> Bool
-equals (HiValueNumber x) (HiValueNumber y) = (x == y)
-equals (HiValueBool x) (HiValueBool y) = (x == y)
-equals (HiValueFunction x) (HiValueFunction y) = (x == y)
-equals _ _ = False
+equals :: HiValue -> HiValue -> Status Bool
+equals (HiValueNumber x) (HiValueNumber y) = return (x == y)
+equals (HiValueBool x) (HiValueBool y) = return (x == y)
+equals (HiValueFunction x) (HiValueFunction y) = return (x == y)
+equals (HiValueString x) (HiValueString y) = return (x == y)
+equals (HiValueNull) (HiValueNull) = return True
+equals _ _ = return False
 
 -- not-greater-then
-ngz :: HiValue -> HiValue -> Bool
-ngz a b = (lz a b) || (equals a b)
+ngz :: HiValue -> HiValue -> Status Bool
+ngz a b = liftA2 (||) (lz a b) (equals a b)

@@ -17,6 +17,7 @@ import Text.Megaparsec
 
 parser :: Parser HiExpr
 parser = do
+  spaced ""
   e <- mainExpr
   eof
   return e

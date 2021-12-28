@@ -4,6 +4,7 @@ import Prettyprinter.Render.Terminal
 import Prettyprinter
 import Data.Ratio (numerator, denominator)
 import Data.Scientific
+import Data.Text
     
 prettyValue :: HiValue -> (Doc AnsiStyle)
 
@@ -39,6 +40,12 @@ prettyValue (HiValueBool False) = pretty "false"
 
 -- function
 prettyValue (HiValueFunction f) = pretty $ funcStr f
+
+-- null
+prettyValue (HiValueNull) = pretty "null"
+
+-- string
+prettyValue (HiValueString str) = pretty $ "\"" ++ (unpack str) ++ "\""
 
 isPow10 :: Rational -> Bool
 isPow10 a = isInf (fromRationalRepetendUnlimited a) where

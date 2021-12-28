@@ -2,6 +2,7 @@
 
 module HW3.Parser where
 
+import Control.Monad (join)
 import Data.Scientific (Scientific, toRealFloat)
 import Data.String
 import Data.Text hiding (foldr, map)
@@ -51,6 +52,17 @@ bool' =
   do spaced "true"; return True
     <|> do spaced "false"; return False
 
+pNull :: Parser HiExpr
+pNull = do
+  spaced "null"
+  return . HiExprValue $ HiValueNull
+
+pString :: Parser HiExpr
+pString = do
+  string "\""
+  x <- manyTill charLiteral (spaced "\"")
+  return . HiExprValue . HiValueString . pack $ x
+
 valFunc :: Text -> HiFun -> Parser HiExpr
 valFunc s n = do
   spaced s
@@ -72,7 +84,7 @@ args :: Parser [HiExpr]
 args = between (spaced "(") (spaced ")") (sepBy mainExpr (spaced ","))
 
 simpleExpr :: Parser HiExpr
-simpleExpr = number <|> funcName <|> bool
+simpleExpr = number <|> funcName <|> bool <|> pString <|> pNull
 
 expr :: Parser HiExpr
 expr =

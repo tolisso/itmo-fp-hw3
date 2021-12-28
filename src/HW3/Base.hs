@@ -24,12 +24,20 @@ data HiFun
   | HiFunNotEquals
   | -- conditional
     HiFunIf
+  | -- string
+    HiFunLength
+  | HiFunToUpper
+  | HiFunToLower
+  | HiFunReverse
+  | HiFunTrim
   deriving (Show, Eq, Ord)
 
 data HiValue
   = HiValueNumber Rational
   | HiValueFunction HiFun
   | HiValueBool Bool
+  | HiValueNull
+  | HiValueString Text
   deriving (Show)
 
 data HiExpr
@@ -59,6 +67,11 @@ funcInfo HiFunNotLessThan = (2, "not-less-then")
 funcInfo HiFunNotGreaterThan = (2, "not-greater-then")
 funcInfo HiFunNotEquals = (2, "not-equals")
 funcInfo HiFunIf = (3, "if")
+funcInfo HiFunLength = (1, "length")
+funcInfo HiFunToUpper = (1, "to-upper")
+funcInfo HiFunToLower = (1, "to-lower")
+funcInfo HiFunReverse = (1, "reverse")
+funcInfo HiFunTrim = (1, "trim")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -81,7 +94,12 @@ funcs =
     HiFunLessThan,
     HiFunGreaterThan,
     HiFunEquals,
-    HiFunIf
+    HiFunIf,
+    HiFunLength,
+    HiFunToUpper,
+    HiFunToLower,
+    HiFunReverse,
+    HiFunTrim
   ]
 
 isLeftAssoc :: Int -> Bool
