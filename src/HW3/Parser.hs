@@ -87,11 +87,9 @@ simpleExpr :: Parser HiExpr
 simpleExpr = number <|> funcName <|> bool <|> pString <|> pNull
 
 expr :: Parser HiExpr
-expr =
-  bracketMainExpr
-    <|> do
-      x <- simpleExpr
-      expr' x
+expr = do
+  x <- simpleExpr <|> bracketMainExpr
+  expr' x
   where
     expr' head = do { y <- func head; expr' y } <|> return head
 

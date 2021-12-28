@@ -139,7 +139,7 @@ apply (HiValueString s) [(HiValueNumber a), (HiValueNumber b)] = do
   -- when x == y: r is empty, but we need to check
   Control.Monad.when (x == y) $ checkBounds s x
   -- check if all indeces are in range
-  if Prelude.foldr (\i acc -> checkBounds' s i && acc) True r
+  if Prelude.all (checkBounds' s) r
     then return . HiValueString . pack $ Prelude.map (index s) r
     else throwError HiErrorInvalidArgument
 apply (HiValueString s) [x, (HiValueNull)] =
