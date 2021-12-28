@@ -3,6 +3,7 @@
 module HW3.Parser where
 
 import Control.Monad (join)
+import Control.Monad.Combinators.Expr
 import Data.Scientific (Scientific, toRealFloat)
 import Data.String
 import Data.Text hiding (foldr, map)
@@ -81,56 +82,50 @@ func head = do
   return $ HiExprApply head body
 
 args :: Parser [HiExpr]
-args = between (spaced "(") (spaced ")") (sepBy mainExpr (spaced ","))
+args = between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
 
 simpleExpr :: Parser HiExpr
 simpleExpr = number <|> funcName <|> bool <|> pString <|> pNull
 
 expr :: Parser HiExpr
 expr = do
-  x <- simpleExpr <|> bracketMainExpr
+  x <- simpleExpr <|> bracketOprExpr
   expr' x
   where
     expr' head = do { y <- func head; expr' y } <|> return head
 
-oprExpr :: Int -> Parser HiExpr
-oprExpr 10 = expr
-oprExpr y = do
-  x <- termParser
-  lamb <- oprExpr'
-  return $ lamb x
-  where
-    termParser = oprExpr (y + 1)
-    -- operators on current level
-    ops = getOperators y
-    -- helper function to convert `Text` to function
-    textToFun f = (HiExprValue . HiValueFunction . opToFun $ f)
-    -- recursive right side parser
-    oprExprNext :: Parser (HiExpr -> HiExpr)
-    oprExprNext =
-      do
-        f <- parseOps y
-        ex <- termParser
-        lamb <- oprExpr'
-        if (isLeftAssoc y)
-          then return $ \outer ->
-            lamb $
-              HiExprApply
-                (textToFun f)
-                [outer, ex]
-          else return $ \outer ->
-            HiExprApply
-              (textToFun f)
-              ([outer, lamb ex])
-    -- parser's main body
-    oprExpr' :: Parser (HiExpr -> HiExpr)
-    oprExpr' = try oprExprNext <|> return id
+mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
+mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
 
-parseOps :: Int -> Parser Text
-parseOps y = foldr (\x acc -> spacedStr x <|> acc) pEmpty (getOperators y)
+mkBinaryX inf name f = inf (mkBin f <$ spaced name)
 
-mainExpr :: Parser HiExpr
-mainExpr = oprExpr 0
+binaryL = mkBinaryX InfixL
 
-bracketMainExpr :: Parser HiExpr
-bracketMainExpr = between (spaced "(") (spaced ")") mainExpr
+binaryR = mkBinaryX InfixR
+
+table :: [[Operator Parser HiExpr]]
+table =
+  [ [ binaryL "*" HiFunMul,
+      binaryL "/" HiFunDiv
+    ],
+    [ binaryL "+" HiFunAdd,
+      binaryL "-" HiFunSub
+    ],
+    [ binaryL "==" HiFunEquals,
+      binaryL ">=" HiFunNotLessThan,
+      binaryL "<=" HiFunGreaterThan,
+      binaryL "/=" HiFunNotEquals,
+      binaryL ">" HiFunGreaterThan,
+      binaryL "<" HiFunLessThan
+    ],
+    [ binaryR "&&" HiFunAnd
+    ],
+    [ binaryR "||" HiFunOr
+    ]
+  ]
+
+oprExpr :: Parser HiExpr
+oprExpr = makeExprParser expr table
+
+bracketOprExpr :: Parser HiExpr
+bracketOprExpr = between (spaced "(") (spaced ")") oprExpr

@@ -39,10 +39,15 @@ reduced (HiValueFunction HiFunAnd) = False
 reduced (HiValueFunction HiFunOr) = False
 reduced _ = True
 
-isTrue :: HiValue -> Bool
-isTrue (HiValueBool True) = True
-isTrue (HiValueBool False) = False
-isTrue _ = undefined
+toBool' :: HiValue -> Status Bool
+toBool' (HiValueBool True) = return True
+toBool' (HiValueBool False) = return False
+toBool' _ = throwError HiErrorInvalidArgument
+
+toBool :: HiExpr -> Status Bool
+toBool x = do
+  xr <- evalM x
+  toBool' $ xr
 
 applyFull :: HiValue -> [HiExpr] -> Status HiValue
 -- if
@@ -55,19 +60,15 @@ applyFull (HiValueFunction HiFunIf) [condExpr, a, b] = do
     applyIf _ = throwError HiErrorInvalidArgument
 -- bool
 applyFull (HiValueFunction HiFunAnd) [a, b] = do
-  ra <- evalM a
-  if (not . isTrue $ ra)
+  ra <- toBool a
+  if (not ra)
     then return . HiValueBool $ False
-    else do
-      rb <- evalM b
-      return . HiValueBool . isTrue $ rb
+    else evalM b
 applyFull (HiValueFunction HiFunOr) [a, b] = do
-  ra <- evalM a
-  if (isTrue $ ra)
+  ra <- toBool a
+  if ra
     then return . HiValueBool $ True
-    else do
-      rb <- evalM b
-      return . HiValueBool . isTrue $ rb
+    else evalM b
 -- other
 applyFull (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
