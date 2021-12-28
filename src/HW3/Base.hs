@@ -102,6 +102,21 @@ funcs =
     HiFunTrim
   ]
 
+isDifferentValues :: HiValue -> HiValue -> Bool
+isDifferentValues (HiValueNumber _) (HiValueNumber _) = False
+isDifferentValues (HiValueFunction _) (HiValueFunction _) = False
+isDifferentValues (HiValueString _) (HiValueString _) = False
+isDifferentValues (HiValueBool _) (HiValueBool _) = False
+isDifferentValues (HiValueNull) (HiValueNull) = False
+isDifferentValues _ _ = True
+
+valPriority :: HiValue -> Int
+valPriority (HiValueString _) = 5
+valPriority (HiValueNumber _) = 4
+valPriority (HiValueBool _) = 3
+valPriority (HiValueFunction _) = 2
+valPriority (HiValueNull) = 1
+
 isLeftAssoc :: Int -> Bool
 isLeftAssoc 2 = False
 isLeftAssoc 3 = False

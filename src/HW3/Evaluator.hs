@@ -1,9 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module HW3.Evaluator where
 
 import Control.Applicative (liftA2)
+import qualified Control.Monad.Cont as Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Trans
+import Data.Foldable (traverse_)
+import Data.Ratio (denominator, numerator)
+import Data.Semigroup (Semigroup (stimes))
 import Data.Text as T
 import HW3.Base
 
@@ -77,23 +83,25 @@ apply (HiValueFunction HiFunSub) [(HiValueNumber a), (HiValueNumber b)] =
 apply (HiValueFunction HiFunMul) [(HiValueNumber a), (HiValueNumber b)] =
   return (HiValueNumber (a * b))
 apply (HiValueFunction HiFunDiv) [(HiValueNumber a), (HiValueNumber b)] =
-  return (HiValueNumber (a / b))
+  if b == 0
+    then throwError HiErrorDivideByZero
+    else return (HiValueNumber (a / b))
 -- bool
 apply (HiValueFunction HiFunNot) [(HiValueBool a)] =
   return (HiValueBool (not a))
 -- compare
 apply (HiValueFunction HiFunEquals) [a, b] =
-  HiValueBool <$> equals a b
+  return . HiValueBool $ equals a b
 apply (HiValueFunction HiFunNotEquals) [a, b] =
-  HiValueBool . not <$> (equals a b)
+  return . HiValueBool . not $ (equals a b)
 apply (HiValueFunction HiFunLessThan) [a, b] =
-  HiValueBool <$> lz a b
+  return . HiValueBool $ lz a b
 apply (HiValueFunction HiFunNotLessThan) [a, b] =
-  HiValueBool . not <$> lz a b
+  return . HiValueBool . not $ lz a b
 apply (HiValueFunction HiFunNotGreaterThan) [a, b] =
-  HiValueBool <$> ngz a b
+  return . HiValueBool $ ngz a b
 apply (HiValueFunction HiFunGreaterThan) [a, b] =
-  HiValueBool . not <$> ngz a b
+  return . HiValueBool . not $ ngz a b
 -- string
 apply (HiValueFunction HiFunLength) [(HiValueString s)] =
   return . HiValueNumber . toRational $ T.length s
@@ -107,6 +115,42 @@ apply (HiValueFunction HiFunTrim) [(HiValueString s)] =
   return . HiValueString $ T.strip s
 apply (HiValueFunction HiFunToUpper) [(HiValueString s)] =
   return . HiValueString $ T.toUpper s
+apply (HiValueFunction HiFunMul) [(HiValueString s), (HiValueNumber n)] =
+  nTimes n s
+apply (HiValueFunction HiFunMul) [(HiValueNumber n), (HiValueString s)] =
+  nTimes n s
+apply (HiValueFunction HiFunAdd) [(HiValueString x), (HiValueString y)] =
+  return . HiValueString $ x <> y
+apply (HiValueFunction HiFunDiv) [(HiValueString x), (HiValueString y)] =
+  return . HiValueString $ x <> "/" <> y
+-- string slices
+apply (HiValueString s) [(HiValueNumber n)] = do
+  x <- getInt n
+  return $
+    if checkBounds' s x
+      then HiValueString . pack $ [T.index s x]
+      else HiValueNull
+apply (HiValueString s) [(HiValueNumber a), (HiValueNumber b)] = do
+  x <- getInt a
+  y <- getInt b
+  let start = if x >= 0 then x else x + T.length s
+  let end = if y >= 0 then y else y + T.length s
+  let r = range (start, end)
+  -- when x == y: r is empty, but we need to check
+  Control.Monad.when (x == y) $ checkBounds s x
+  -- check if all indeces are in range
+  if Prelude.foldr (\i acc -> checkBounds' s i && acc) True r
+    then return . HiValueString . pack $ Prelude.map (index s) r
+    else throwError HiErrorInvalidArgument
+apply (HiValueString s) [x, (HiValueNull)] =
+  apply (HiValueString s) [x, (HiValueNumber . toRational $ T.length s)]
+apply (HiValueString s) [(HiValueNull), y] =
+  apply (HiValueString s) [(HiValueNumber 0), y]
+apply (HiValueString _) args =
+  let sz = Prelude.length args
+   in if sz == 1 || sz == 2
+        then throwError HiErrorInvalidArgument
+        else throwError HiErrorArityMismatch
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -119,27 +163,56 @@ check cond err =
   unless cond $ throwError err
 
 -- lower-then
-lz :: HiValue -> HiValue -> Status Bool
-lz (HiValueNumber x) (HiValueNumber y) = return (x < y)
-lz (HiValueBool x) (HiValueBool y) = return (x < y)
-lz (HiValueFunction x) (HiValueFunction y) = return (x < y)
-lz (HiValueFunction _) _ = return True
-lz (HiValueBool _) (HiValueNumber _) = return True
-lz (HiValueString x) (HiValueString y) = return $ x < y
-lz (HiValueString _) _ = throwError HiErrorInvalidArgument
-lz _ (HiValueString _) = throwError HiErrorInvalidArgument
-lz _ HiValueNull = throwError HiErrorInvalidArgument
-lz HiValueNull _ = throwError HiErrorInvalidArgument
-lz _ _ = return False
+lz :: HiValue -> HiValue -> Bool
+lz (HiValueNumber x) (HiValueNumber y) = (x < y)
+lz (HiValueBool x) (HiValueBool y) = (x < y)
+lz (HiValueFunction x) (HiValueFunction y) = (x < y)
+lz (HiValueString x) (HiValueString y) = x < y
+lz (HiValueNull) (HiValueNull) = False
+lz x y | isDifferentValues x y = (valPriority x) < (valPriority y)
+lz x y =
+  error $
+    "lz didn't initialized for \"" ++ show x
+      ++ "\", \""
+      ++ show y
+      ++ "\""
 
-equals :: HiValue -> HiValue -> Status Bool
-equals (HiValueNumber x) (HiValueNumber y) = return (x == y)
-equals (HiValueBool x) (HiValueBool y) = return (x == y)
-equals (HiValueFunction x) (HiValueFunction y) = return (x == y)
-equals (HiValueString x) (HiValueString y) = return (x == y)
-equals (HiValueNull) (HiValueNull) = return True
-equals _ _ = return False
+equals :: HiValue -> HiValue -> Bool
+equals (HiValueNumber x) (HiValueNumber y) = (x == y)
+equals (HiValueBool x) (HiValueBool y) = (x == y)
+equals (HiValueFunction x) (HiValueFunction y) = (x == y)
+equals (HiValueString x) (HiValueString y) = (x == y)
+equals (HiValueNull) (HiValueNull) = True
+equals _ _ = False
 
 -- not-greater-then
-ngz :: HiValue -> HiValue -> Status Bool
-ngz a b = liftA2 (||) (lz a b) (equals a b)
+ngz :: HiValue -> HiValue -> Bool
+ngz a b = (lz a b) || (equals a b)
+
+getInt :: Rational -> Status Int
+getInt n | denominator n /= 1 = throwError HiErrorInvalidArgument
+getInt n = return . fromIntegral . numerator $ n
+
+nTimes :: Rational -> Text -> Status HiValue
+nTimes n s = do
+  x <- getInt n
+  return
+    . HiValueString
+    . stimes x
+    $ s
+
+checkBounds' :: Text -> Int -> Bool
+checkBounds' _ n | n < 0 = False
+checkBounds' s n | T.length s <= n = False
+checkBounds' _ _ = True
+
+checkBounds :: Text -> Int -> Status ()
+checkBounds n s =
+  if checkBounds' n s
+    then return ()
+    else throwError HiErrorInvalidArgument
+
+range :: (Int, Int) -> [Int]
+range (x, y) | x < y = [x .. y - 1]
+range (x, y) | y < x = Prelude.reverse [y .. x - 1]
+range _ = []
