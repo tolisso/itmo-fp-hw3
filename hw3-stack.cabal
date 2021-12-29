@@ -37,6 +37,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , containers
     , deepseq
     , haskeline
     , megaparsec
@@ -57,6 +58,7 @@ executable hw3-stack-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , deepseq
     , haskeline
     , hw3-stack
@@ -79,6 +81,7 @@ test-suite hw3-stack-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , deepseq
     , haskeline
     , megaparsec

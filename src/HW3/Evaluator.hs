@@ -10,6 +10,7 @@ import Control.Monad.Trans
 import Data.Foldable (traverse_)
 import Data.Ratio (denominator, numerator)
 import Data.Semigroup (Semigroup (stimes))
+import Data.Sequence (fromList)
 import Data.Text as T
 import HW3.Base
 
@@ -124,6 +125,8 @@ apply (HiValueFunction HiFunAdd) [(HiValueString x), (HiValueString y)] =
   return . HiValueString $ x <> y
 apply (HiValueFunction HiFunDiv) [(HiValueString x), (HiValueString y)] =
   return . HiValueString $ x <> "/" <> y
+apply (HiValueFunction HiFunList) arr =
+  return . HiValueList . fromList $ arr
 -- string slices
 apply (HiValueString s) [(HiValueNumber n)] = do
   x <- getInt n

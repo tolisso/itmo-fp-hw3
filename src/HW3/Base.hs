@@ -2,6 +2,7 @@
 
 module HW3.Base where
 
+import Data.Sequence (Seq)
 import Data.Text
 import GHC.Natural
 
@@ -30,6 +31,10 @@ data HiFun
   | HiFunToLower
   | HiFunReverse
   | HiFunTrim
+  | -- list
+    HiFunList
+  | HiFunRange
+  | HiFunFold
   deriving (Show, Eq, Ord)
 
 data HiValue
@@ -38,6 +43,7 @@ data HiValue
   | HiValueBool Bool
   | HiValueNull
   | HiValueString Text
+  | HiValueList (Seq HiValue)
   deriving (Show)
 
 data HiExpr
@@ -72,6 +78,9 @@ funcInfo HiFunToUpper = (1, "to-upper")
 funcInfo HiFunToLower = (1, "to-lower")
 funcInfo HiFunReverse = (1, "reverse")
 funcInfo HiFunTrim = (1, "trim")
+funcInfo HiFunList = (error "list is varag", "list")
+funcInfo HiFunRange = (2, "range")
+funcInfo HiFunFold = (2, "fold")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -99,7 +108,10 @@ funcs =
     HiFunToUpper,
     HiFunToLower,
     HiFunReverse,
-    HiFunTrim
+    HiFunTrim,
+    HiFunList,
+    HiFunRange,
+    HiFunFold
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
@@ -111,6 +123,7 @@ isDifferentValues (HiValueNull) (HiValueNull) = False
 isDifferentValues _ _ = True
 
 valPriority :: HiValue -> Int
+valPriority (HiValueList _) = 6
 valPriority (HiValueString _) = 5
 valPriority (HiValueNumber _) = 4
 valPriority (HiValueBool _) = 3

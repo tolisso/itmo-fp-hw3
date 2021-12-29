@@ -30,6 +30,7 @@ dependencies:
   - prettyprinter-ansi-terminal
   - haskeline
   - parser-combinators
+  - containers
 
 library:
   source-dirs: src
@@ -52,6 +53,7 @@ executables:
       - prettyprinter-ansi-terminal
       - haskeline
       - parser-combinators
+      - containers
 
 tests:
   hw3-stack-test:
