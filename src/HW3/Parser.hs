@@ -64,6 +64,11 @@ pString = do
   x <- manyTill charLiteral (spaced "\"")
   return . HiExprValue . HiValueString . pack $ x
 
+pList :: Parser HiExpr
+pList = do
+  x <- between (spaced "[") (spaced "]") (sepBy oprExpr (spaced ","))
+  return $ HiExprApply (HiExprValue . HiValueFunction $ HiFunList) x
+
 valFunc :: Text -> HiFun -> Parser HiExpr
 valFunc s n = do
   spaced s
@@ -85,7 +90,7 @@ args :: Parser [HiExpr]
 args = between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
 
 simpleExpr :: Parser HiExpr
-simpleExpr = number <|> funcName <|> bool <|> pString <|> pNull
+simpleExpr = number <|> funcName <|> bool <|> pString <|> pNull <|> pList
 
 expr :: Parser HiExpr
 expr = do

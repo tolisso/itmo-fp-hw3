@@ -9,6 +9,7 @@ import Control.Monad.Identity
 import Control.Monad.Trans
 import qualified Data.Foldable as F
 import Data.Ratio (denominator, numerator)
+import qualified Data.Ratio as Prelude
 import Data.Semigroup (Semigroup (stimes))
 import qualified Data.Sequence as S
 import Data.Text as T
@@ -155,15 +156,28 @@ apply (HiValueString _) args =
 -- list
 apply (HiValueFunction HiFunList) arr =
   return . HiValueList . S.fromList $ arr
+apply (HiValueFunction HiFunReverse) [HiValueList arr] =
+  return . HiValueList . S.reverse $ arr
 apply (HiValueFunction HiFunFold) [(HiValueFunction f), HiValueList arr] = do
   check (not . S.null $ arr) HiErrorInvalidArgument
   Prelude.foldl1
     ( \x y -> do
         xr <- x
         yr <- y
-        apply (HiValueFunction f) [xr, yr]
+        evalM $
+          HiExprApply
+            (HiExprValue . HiValueFunction $ f)
+            [HiExprValue xr, HiExprValue yr]
     )
     (Prelude.map return (F.toList arr))
+apply (HiValueFunction HiFunRange) [(HiValueNumber x), (HiValueNumber y)] =
+  return
+    . HiValueList
+    . S.fromList
+    . Prelude.map (HiValueNumber . toRational)
+    $ [x .. if Prelude.denominator (x - y) == 1 then y - 1 else y]
+apply (HiValueFunction HiFunLength) [(HiValueList arr)] =
+  return . HiValueNumber . toRational $ S.length arr
 apply (HiValueList arr) [(HiValueNumber i)] = do
   x <- getInt i
   return $
