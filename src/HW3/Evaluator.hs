@@ -7,10 +7,10 @@ import qualified Control.Monad.Cont as Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Trans
-import Data.Foldable (traverse_)
+import qualified Data.Foldable as F
 import Data.Ratio (denominator, numerator)
 import Data.Semigroup (Semigroup (stimes))
-import Data.Sequence (fromList)
+import qualified Data.Sequence as S
 import Data.Text as T
 import HW3.Base
 
@@ -118,39 +118,80 @@ apply (HiValueFunction HiFunTrim) [(HiValueString s)] =
 apply (HiValueFunction HiFunToUpper) [(HiValueString s)] =
   return . HiValueString $ T.toUpper s
 apply (HiValueFunction HiFunMul) [(HiValueString s), (HiValueNumber n)] =
-  nTimes n s
+  nTimes n s HiValueString
 apply (HiValueFunction HiFunMul) [(HiValueNumber n), (HiValueString s)] =
-  nTimes n s
+  nTimes n s HiValueString
 apply (HiValueFunction HiFunAdd) [(HiValueString x), (HiValueString y)] =
   return . HiValueString $ x <> y
 apply (HiValueFunction HiFunDiv) [(HiValueString x), (HiValueString y)] =
   return . HiValueString $ x <> "/" <> y
-apply (HiValueFunction HiFunList) arr =
-  return . HiValueList . fromList $ arr
 -- string slices
 apply (HiValueString s) [(HiValueNumber n)] = do
   x <- getInt n
   return $
-    if checkBounds' s x
+    if checkBoundsStr s x
       then HiValueString . pack $ [T.index s x]
       else HiValueNull
-apply (HiValueString s) [(HiValueNumber a), (HiValueNumber b)] = do
-  x <- getInt a
-  y <- getInt b
-  let start = if x >= 0 then x else x + T.length s
-  let end = if y >= 0 then y else y + T.length s
-  let r = range (start, end)
-  -- when x == y: r is empty, but we need to check
-  Control.Monad.when (x == y) $ checkBounds s x
-  -- check if all indeces are in range
-  if Prelude.all (checkBounds' s) r
-    then return . HiValueString . pack $ Prelude.map (index s) r
-    else throwError HiErrorInvalidArgument
+apply (HiValueString s) [(HiValueNumber a), (HiValueNumber b)] =
+  slice s a b (T.length s) $ \str start end ->
+    if start <= end
+      then do
+        checkBoundsStr_ str start
+        checkBoundsStr_ str (end - 1)
+        return . HiValueString $ substr str start end
+      else do
+        checkBoundsStr_ s (end + 1)
+        checkBoundsStr_ s start
+        return . HiValueString $ T.reverse (substr s (end + 1) (start + 1))
 apply (HiValueString s) [x, (HiValueNull)] =
   apply (HiValueString s) [x, (HiValueNumber . toRational $ T.length s)]
 apply (HiValueString s) [(HiValueNull), y] =
   apply (HiValueString s) [(HiValueNumber 0), y]
 apply (HiValueString _) args =
+  let sz = Prelude.length args
+   in if sz == 1 || sz == 2
+        then throwError HiErrorInvalidArgument
+        else throwError HiErrorArityMismatch
+-- list
+apply (HiValueFunction HiFunList) arr =
+  return . HiValueList . S.fromList $ arr
+apply (HiValueFunction HiFunFold) [(HiValueFunction f), HiValueList arr] = do
+  check (not . S.null $ arr) HiErrorInvalidArgument
+  Prelude.foldl1
+    ( \x y -> do
+        xr <- x
+        yr <- y
+        apply (HiValueFunction f) [xr, yr]
+    )
+    (Prelude.map return (F.toList arr))
+apply (HiValueList arr) [(HiValueNumber i)] = do
+  x <- getInt i
+  return $
+    if checkBoundsSeq arr x
+      then HiValueList . S.singleton $ S.index arr x
+      else HiValueNull
+apply (HiValueList arr) [(HiValueNumber a), (HiValueNumber b)] =
+  slice arr a b (S.length arr) $ \s start end ->
+    if start <= end
+      then do
+        checkBoundsSeq_ s start
+        checkBoundsSeq_ s (end - 1)
+        return . HiValueList $ subseq s start end
+      else do
+        checkBoundsSeq_ s (end + 1)
+        checkBoundsSeq_ s start
+        return . HiValueList $ S.reverse (subseq s (end + 1) (start + 1))
+apply (HiValueList s) [x, (HiValueNull)] =
+  apply (HiValueList s) [x, (HiValueNumber . toRational $ S.length s)]
+apply (HiValueList s) [(HiValueNull), y] =
+  apply (HiValueList s) [(HiValueNumber 0), y]
+apply (HiValueFunction HiFunMul) [(HiValueList s), (HiValueNumber n)] =
+  nTimes n s HiValueList
+apply (HiValueFunction HiFunMul) [(HiValueNumber n), (HiValueList s)] =
+  nTimes n s HiValueList
+apply (HiValueFunction HiFunAdd) [(HiValueList x), (HiValueList y)] =
+  return . HiValueList $ x S.>< y
+apply (HiValueList _) args =
   let sz = Prelude.length args
    in if sz == 1 || sz == 2
         then throwError HiErrorInvalidArgument
@@ -197,26 +238,48 @@ getInt :: Rational -> Status Int
 getInt n | denominator n /= 1 = throwError HiErrorInvalidArgument
 getInt n = return . fromIntegral . numerator $ n
 
-nTimes :: Rational -> Text -> Status HiValue
-nTimes n s = do
+nTimes :: Semigroup a => Rational -> a -> (a -> HiValue) -> Status HiValue
+nTimes n s val = do
   x <- getInt n
   return
-    . HiValueString
+    . val
     . stimes x
     $ s
 
-checkBounds' :: Text -> Int -> Bool
-checkBounds' _ n | n < 0 = False
-checkBounds' s n | T.length s <= n = False
-checkBounds' _ _ = True
+checkBounds :: Int -> Int -> Bool
+checkBounds _ n | n < 0 = False
+checkBounds sz n | sz <= n = False
+checkBounds _ _ = True
 
-checkBounds :: Text -> Int -> Status ()
-checkBounds n s =
-  if checkBounds' n s
-    then return ()
-    else throwError HiErrorInvalidArgument
+checkBoundsStr :: Text -> Int -> Bool
+checkBoundsStr s = checkBounds (T.length s)
 
-range :: (Int, Int) -> [Int]
-range (x, y) | x < y = [x .. y - 1]
-range (x, y) | y < x = Prelude.reverse [y .. x - 1]
-range _ = []
+checkBoundsStr_ :: Text -> Int -> Status ()
+checkBoundsStr_ s i = check (checkBoundsStr s i) HiErrorInvalidArgument
+
+checkBoundsSeq :: S.Seq HiValue -> Int -> Bool
+checkBoundsSeq arr = checkBounds $ S.length arr
+
+checkBoundsSeq_ :: S.Seq HiValue -> Int -> Status ()
+checkBoundsSeq_ s i = check (checkBoundsSeq s i) HiErrorInvalidArgument
+
+-- abstraction converting `Rational` borders to `Int` and apply last argument function
+slice ::
+  t -> -- what to slice
+  Rational -> -- l rational
+  Rational -> -- r rational
+  Int -> -- length
+  (t -> Int -> Int -> Status HiValue) -> -- func to get slice with int borders
+  Status HiValue
+slice arr a b len getSlice = do
+  x <- getInt a
+  y <- getInt b
+  let start = if x >= 0 then x else x + len
+  let end = if y >= 0 then y else y + len
+  getSlice arr start end
+
+substr :: Text -> Int -> Int -> Text
+substr t l r = T.drop l . T.take r $ t
+
+subseq :: S.Seq HiValue -> Int -> Int -> S.Seq HiValue
+subseq t l r = S.drop l . S.take r $ t
