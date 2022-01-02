@@ -1,9 +1,15 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module HW3.Base where
 
+import Codec.Serialise (Serialise)
+import qualified Data.ByteString as B
 import Data.Sequence (Seq)
 import Data.Text
+import GHC.Generics (Generic)
 import GHC.Natural
 
 data HiFun
@@ -35,7 +41,18 @@ data HiFun
     HiFunList
   | HiFunRange
   | HiFunFold
+  | -- bytes
+    HiFunPackBytes
+  | HiFunUnpackBytes
+  | HiFunEncodeUtf8
+  | HiFunDecodeUtf8
+  | HiFunZip
+  | HiFunUnzip
+  | HiFunSerialise
+  | HiFunDeserialise
   deriving (Show, Eq, Ord)
+  deriving stock (Generic)
+  deriving anyclass (Serialise)
 
 data HiValue
   = HiValueNumber Rational
@@ -44,7 +61,10 @@ data HiValue
   | HiValueNull
   | HiValueString Text
   | HiValueList (Seq HiValue)
+  | HiValueBytes B.ByteString
   deriving (Show)
+  deriving stock (Generic)
+  deriving anyclass (Serialise)
 
 data HiExpr
   = HiExprValue HiValue
@@ -81,6 +101,14 @@ funcInfo HiFunTrim = (1, "trim")
 funcInfo HiFunList = (error "list is varag", "list")
 funcInfo HiFunRange = (2, "range")
 funcInfo HiFunFold = (2, "fold")
+funcInfo HiFunPackBytes = (1, "pack-bytes")
+funcInfo HiFunUnpackBytes = (1, "unpack-bytes")
+funcInfo HiFunEncodeUtf8 = (1, "encode-utf8")
+funcInfo HiFunDecodeUtf8 = (1, "decode-utf8")
+funcInfo HiFunZip = (1, "zip")
+funcInfo HiFunUnzip = (1, "unzip")
+funcInfo HiFunSerialise = (1, "serialize")
+funcInfo HiFunDeserialise = (1, "deserialize")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -111,7 +139,15 @@ funcs =
     HiFunTrim,
     HiFunList,
     HiFunRange,
-    HiFunFold
+    HiFunFold,
+    HiFunPackBytes,
+    HiFunUnpackBytes,
+    HiFunEncodeUtf8,
+    HiFunDecodeUtf8,
+    HiFunZip,
+    HiFunUnzip,
+    HiFunSerialise,
+    HiFunDeserialise
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
@@ -123,6 +159,7 @@ isDifferentValues (HiValueNull) (HiValueNull) = False
 isDifferentValues _ _ = True
 
 valPriority :: HiValue -> Int
+valPriority (HiValueBytes _) = 7
 valPriority (HiValueList _) = 6
 valPriority (HiValueString _) = 5
 valPriority (HiValueNumber _) = 4

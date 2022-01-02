@@ -37,6 +37,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , containers
     , deepseq
     , haskeline
@@ -46,7 +47,9 @@ library
     , prettyprinter
     , prettyprinter-ansi-terminal
     , scientific ==0.3.7.0
+    , serialise
     , text
+    , zlib
   default-language: Haskell2010
 
 executable hw3-stack-exe
@@ -58,6 +61,7 @@ executable hw3-stack-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , containers
     , deepseq
     , haskeline
@@ -68,7 +72,9 @@ executable hw3-stack-exe
     , prettyprinter
     , prettyprinter-ansi-terminal
     , scientific ==0.3.7.0
+    , serialise
     , text
+    , zlib
   default-language: Haskell2010
 
 test-suite hw3-stack-test
@@ -81,6 +87,7 @@ test-suite hw3-stack-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , containers
     , deepseq
     , haskeline
@@ -90,5 +97,7 @@ test-suite hw3-stack-test
     , prettyprinter
     , prettyprinter-ansi-terminal
     , scientific ==0.3.7.0
+    , serialise
     , text
+    , zlib
   default-language: Haskell2010

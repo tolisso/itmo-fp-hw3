@@ -4,10 +4,13 @@ module HW3.Parser where
 
 import Control.Monad (join)
 import Control.Monad.Combinators.Expr
+import qualified Data.ByteString as B
+import Data.Char (digitToInt)
 import Data.Scientific (Scientific, toRealFloat)
 import Data.String
 import Data.Text hiding (foldr, map)
 import Data.Void
+import qualified Data.Word as W
 import HW3.Base
 import Text.Megaparsec
 import Text.Megaparsec.Char as C
@@ -69,6 +72,18 @@ pList = do
   x <- between (spaced "[") (spaced "]") (sepBy oprExpr (spaced ","))
   return $ HiExprApply (HiExprValue . HiValueFunction $ HiFunList) x
 
+hexnumber :: Parser W.Word8
+hexnumber = do
+  x <- hexDigitChar
+  y <- hexDigitChar
+  spaced ""
+  return . fromIntegral $ (digitToInt x) * 16 + (digitToInt y)
+
+pBytes :: Parser HiExpr
+pBytes = do
+  x <- between (spaced "[#") (spaced "#]") (many hexnumber)
+  return . HiExprValue . HiValueBytes . B.pack $ x
+
 valFunc :: Text -> HiFun -> Parser HiExpr
 valFunc s n = do
   spaced s
@@ -90,7 +105,14 @@ args :: Parser [HiExpr]
 args = between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
 
 simpleExpr :: Parser HiExpr
-simpleExpr = number <|> funcName <|> bool <|> pString <|> pNull <|> pList
+simpleExpr =
+  number
+    <|> funcName
+    <|> bool
+    <|> pString
+    <|> pNull
+    <|> pBytes
+    <|> pList
 
 expr :: Parser HiExpr
 expr = do

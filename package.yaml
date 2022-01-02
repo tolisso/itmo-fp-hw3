@@ -31,6 +31,9 @@ dependencies:
   - haskeline
   - parser-combinators
   - containers
+  - bytestring
+  - serialise
+  - zlib
 
 library:
   source-dirs: src
@@ -54,6 +57,9 @@ executables:
       - haskeline
       - parser-combinators
       - containers
+      - bytestring
+      - serialise
+      - zlib
 
 tests:
   hw3-stack-test:

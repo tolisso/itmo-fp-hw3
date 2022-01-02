@@ -1,6 +1,9 @@
 module HW3.Pretty where
 
 import Control.Applicative.Combinators (between)
+import qualified Control.Applicative.Combinators as F
+import qualified Data.ByteString as B
+import Data.Char
 import qualified Data.Foldable as F
 import qualified Data.List as L
 import Data.Ratio (denominator, numerator)
@@ -8,8 +11,10 @@ import Data.Scientific
 import qualified Data.Sequence as S
 import Data.Text
 import HW3.Base
+import Numeric (showHex)
 import Prettyprinter
 import Prettyprinter.Render.Terminal
+import Text.Printf (printf)
 
 prettyValue :: HiValue -> (Doc AnsiStyle)
 -- number
@@ -55,6 +60,21 @@ prettyValue (HiValueList arr) =
            $ arr
        )
     <> pretty " ]"
+-- bytes
+prettyValue (HiValueBytes str) =
+  pretty "[# "
+    <> ( F.fold
+           . L.intersperse (pretty " ")
+           . Prelude.map
+             -- Word8 -> enum -> hex string -> Doc (wich pretty returns)
+             ( pretty
+                 . (\s -> printf "%02x" s :: String)
+                 . fromEnum
+             )
+           . B.unpack
+           $ str
+       )
+    <> pretty " #]"
 
 isPow10 :: Rational -> Bool
 isPow10 a = isInf (fromRationalRepetendUnlimited a)

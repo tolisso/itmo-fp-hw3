@@ -2,17 +2,22 @@
 
 module HW3.Evaluator where
 
+import Codec.Compression.GZip (compressLevel)
+import qualified Codec.Compression.Zlib as Zl
+import qualified Codec.Serialise as Ser
 import Control.Applicative (liftA2)
-import qualified Control.Monad.Cont as Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
-import Control.Monad.Trans
+import qualified Data.ByteString as B
+import Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
 import qualified Data.Foldable as F
 import Data.Ratio (denominator, numerator)
-import qualified Data.Ratio as Prelude
 import Data.Semigroup (Semigroup (stimes))
 import qualified Data.Sequence as S
 import Data.Text as T
+import Data.Text.Encoding as Enc
+import Data.Text.Encoding.Error (UnicodeException)
+import qualified Data.Word as W
 import HW3.Base
 
 type Status = ExceptT HiError Identity
@@ -134,16 +139,8 @@ apply (HiValueString s) [(HiValueNumber n)] = do
       then HiValueString . pack $ [T.index s x]
       else HiValueNull
 apply (HiValueString s) [(HiValueNumber a), (HiValueNumber b)] =
-  slice s a b (T.length s) $ \str start end ->
-    if start <= end
-      then do
-        checkBoundsStr_ str start
-        checkBoundsStr_ str (end - 1)
-        return . HiValueString $ substr str start end
-      else do
-        checkBoundsStr_ s (end + 1)
-        checkBoundsStr_ s start
-        return . HiValueString $ T.reverse (substr s (end + 1) (start + 1))
+  slice s a b T.length substr $ \str ->
+    return . HiValueString $ str
 apply (HiValueString s) [x, (HiValueNull)] =
   apply (HiValueString s) [x, (HiValueNumber . toRational $ T.length s)]
 apply (HiValueString s) [(HiValueNull), y] =
@@ -175,7 +172,7 @@ apply (HiValueFunction HiFunRange) [(HiValueNumber x), (HiValueNumber y)] =
     . HiValueList
     . S.fromList
     . Prelude.map (HiValueNumber . toRational)
-    $ [x .. if Prelude.denominator (x - y) == 1 then y - 1 else y]
+    $ [x .. y]
 apply (HiValueFunction HiFunLength) [(HiValueList arr)] =
   return . HiValueNumber . toRational $ S.length arr
 apply (HiValueList arr) [(HiValueNumber i)] = do
@@ -185,16 +182,8 @@ apply (HiValueList arr) [(HiValueNumber i)] = do
       then HiValueList . S.singleton $ S.index arr x
       else HiValueNull
 apply (HiValueList arr) [(HiValueNumber a), (HiValueNumber b)] =
-  slice arr a b (S.length arr) $ \s start end ->
-    if start <= end
-      then do
-        checkBoundsSeq_ s start
-        checkBoundsSeq_ s (end - 1)
-        return . HiValueList $ subseq s start end
-      else do
-        checkBoundsSeq_ s (end + 1)
-        checkBoundsSeq_ s start
-        return . HiValueList $ S.reverse (subseq s (end + 1) (start + 1))
+  slice arr a b S.length subseq $ \seq ->
+    return . HiValueList $ seq
 apply (HiValueList s) [x, (HiValueNull)] =
   apply (HiValueList s) [x, (HiValueNumber . toRational $ S.length s)]
 apply (HiValueList s) [(HiValueNull), y] =
@@ -210,6 +199,60 @@ apply (HiValueList _) args =
    in if sz == 1 || sz == 2
         then throwError HiErrorInvalidArgument
         else throwError HiErrorArityMismatch
+-- bytes
+apply (HiValueFunction HiFunPackBytes) [(HiValueList arr)] = do
+  vals <- traverse (toWord8) (F.toList arr)
+  return . HiValueBytes . B.pack $ vals
+apply (HiValueFunction HiFunUnpackBytes) [(HiValueBytes bs)] =
+  do
+    return
+    . HiValueList
+    . S.fromList
+    . Prelude.map (HiValueNumber . fromIntegral)
+    . B.unpack
+    $ bs
+apply (HiValueFunction HiFunSerialise) [arg] =
+  return . HiValueBytes . toStrict . Ser.serialise $ arg
+apply (HiValueFunction HiFunDeserialise) [HiValueBytes bs] = do
+  let res = Ser.deserialise . fromStrict $ bs
+  return (res :: HiValue)
+apply (HiValueFunction HiFunDecodeUtf8) [HiValueBytes bt] = do
+  let res = Enc.decodeUtf8' bt
+  return . decodeResToValue $ res
+apply (HiValueFunction HiFunZip) [HiValueBytes bt] =
+  do
+    return
+    . HiValueBytes
+    . toStrict
+    . compress
+    . fromStrict
+    $ bt
+apply (HiValueFunction HiFunUnzip) [HiValueBytes bt] =
+  return
+    . HiValueBytes
+    . toStrict
+    . Zl.decompress
+    . fromStrict
+    $ bt
+apply (HiValueFunction HiFunAdd) [HiValueBytes a, HiValueBytes b] =
+  return
+    . HiValueBytes
+    $ B.append a b
+apply (HiValueFunction HiFunMul) [HiValueBytes a, HiValueNumber n] =
+  mulBytes n a
+apply (HiValueFunction HiFunMul) [HiValueNumber n, HiValueBytes a] =
+  mulBytes n a
+apply (HiValueBytes bt) [HiValueNumber n] =
+  do
+    x <- getInt n
+    return $
+      if checkBoundsByte bt x
+        then HiValueBytes . B.singleton . (`B.index` x) $ bt
+        else HiValueNull
+apply (HiValueBytes bt) [HiValueNumber a, HiValueNumber b] =
+  slice bt a b B.length subbyte $
+    \bt -> return . HiValueBytes $ bt
+apply (HiValueBytes _) _ = throwError HiErrorInvalidArgument
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -268,32 +311,62 @@ checkBounds _ _ = True
 checkBoundsStr :: Text -> Int -> Bool
 checkBoundsStr s = checkBounds (T.length s)
 
-checkBoundsStr_ :: Text -> Int -> Status ()
-checkBoundsStr_ s i = check (checkBoundsStr s i) HiErrorInvalidArgument
-
 checkBoundsSeq :: S.Seq HiValue -> Int -> Bool
 checkBoundsSeq arr = checkBounds $ S.length arr
 
-checkBoundsSeq_ :: S.Seq HiValue -> Int -> Status ()
-checkBoundsSeq_ s i = check (checkBoundsSeq s i) HiErrorInvalidArgument
+checkBoundsByte :: B.ByteString -> Int -> Bool
+checkBoundsByte arr = checkBounds $ B.length arr
 
 -- abstraction converting `Rational` borders to `Int` and apply last argument function
 slice ::
   t -> -- what to slice
   Rational -> -- l rational
   Rational -> -- r rational
-  Int -> -- length
-  (t -> Int -> Int -> Status HiValue) -> -- func to get slice with int borders
+  (t -> Int) -> -- length
+  (Int -> Int -> t -> t) -> -- func to get slice with int borders
+  (t -> Status HiValue) -> -- func to get slice with int borders
   Status HiValue
-slice arr a b len getSlice = do
+slice arr a b len getSlice wrap = do
   x <- getInt a
   y <- getInt b
-  let start = if x >= 0 then x else x + len
-  let end = if y >= 0 then y else y + len
-  getSlice arr start end
+  let l = len arr
+  let start' = if x >= 0 then x else x + l
+  let end' = if y >= 0 then y else y + l
+  let start = limit 0 l start'
+  let end = limit 0 l end'
+  wrap . getSlice start end $ arr
+  where
+    limit a _ i | i < a = 0
+    limit _ b i | b <= i = b
+    limit _ _ i = i
 
-substr :: Text -> Int -> Int -> Text
-substr t l r = T.drop l . T.take r $ t
+substr :: Int -> Int -> Text -> Text
+substr l r t = T.drop l . T.take r $ t
 
-subseq :: S.Seq HiValue -> Int -> Int -> S.Seq HiValue
-subseq t l r = S.drop l . S.take r $ t
+subseq :: Int -> Int -> S.Seq HiValue -> S.Seq HiValue
+subseq l r t = S.drop l . S.take r $ t
+
+subbyte :: Int -> Int -> B.ByteString -> B.ByteString
+subbyte l r t = B.drop l . B.take r $ t
+
+toWord8 :: HiValue -> Status W.Word8
+toWord8 (HiValueNumber n) = do
+  i <- getInt n
+  if 0 <= i && i <= 255
+    then return (fromIntegral i)
+    else throwError HiErrorInvalidArgument
+toWord8 _ = throwError HiErrorInvalidArgument
+
+decodeResToValue :: Either UnicodeException Text -> HiValue
+decodeResToValue (Left _) = HiValueNull
+decodeResToValue (Right t) = HiValueString t
+
+compress =
+  Zl.compressWith
+    Zl.defaultCompressParams
+      { compressLevel = Zl.bestCompression
+      }
+
+mulBytes n a = do
+  i <- getInt n
+  return . HiValueBytes . stimes i $ a
