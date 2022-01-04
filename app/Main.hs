@@ -3,11 +3,14 @@
 module Main where
 
 import Control.Monad
+import Control.Monad.Except (ExceptT)
+import Control.Monad.RWS.Lazy (MonadIO (liftIO))
+import Data.Set (fromList)
 import Data.Text as T
 import Data.Void
 import GHC.IO.Handle
 import GHC.IO.Handle.FD
-import HW3.Base (HiExpr (HiExprValue), HiFun (HiFunDiv), HiValue (HiValueFunction))
+import HW3.Base
 import HW3.Evaluator
 import HW3.Parser
 import HW3.Pretty
@@ -26,10 +29,12 @@ getResult :: String -> InputT IO ()
 getResult input = eval' (parse parser "aba" (pack input))
   where
     eval' :: Either (ParseErrorBundle Text Void) HiExpr -> InputT IO ()
-    eval' (Left s) = outputStrLn (show s)
-    eval' (Right v) = either printRes printRes (prettyValue <$> eval v)
+    eval' (Left s) = outputStrLn . show $ s
+    eval' (Right v) = do
+      x <- liftIO $ runHIO (eval v :: HIO (Either HiError HiValue)) (fromList [])
+      either printRes printRes (prettyValue <$> x)
       where
-        printRes v = outputStrLn $ show v
+        printRes v = outputStrLn . show $ v
 
 main :: IO ()
 main = runInputT defaultSettings loop

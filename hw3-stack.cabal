@@ -27,9 +27,9 @@ library
   exposed-modules:
       HW3.Base
       HW3.Evaluator
+      HW3.Hio
       HW3.Parser
       HW3.Pretty
-      HW3.Util
       Lib
   other-modules:
       Paths_hw3_stack
@@ -40,6 +40,7 @@ library
     , bytestring
     , containers
     , deepseq
+    , directory
     , haskeline
     , megaparsec
     , mtl
@@ -64,6 +65,7 @@ executable hw3-stack-exe
     , bytestring
     , containers
     , deepseq
+    , directory
     , haskeline
     , hw3-stack
     , megaparsec
@@ -90,6 +92,7 @@ test-suite hw3-stack-test
     , bytestring
     , containers
     , deepseq
+    , directory
     , haskeline
     , megaparsec
     , mtl

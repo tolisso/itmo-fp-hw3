@@ -6,9 +6,12 @@
 module HW3.Base where
 
 import Codec.Serialise (Serialise)
+import Control.Exception (Exception)
 import qualified Data.ByteString as B
 import Data.Sequence (Seq)
+import Data.Set (Set)
 import Data.Text
+import qualified GHC.Base as Control.Monad
 import GHC.Generics (Generic)
 import GHC.Natural
 
@@ -77,6 +80,27 @@ data HiError
   | HiErrorArityMismatch
   | HiErrorDivideByZero
   deriving (Show)
+
+data HiAction
+  = HiActionRead FilePath
+  | HiActionWrite FilePath B.ByteString
+  | HiActionMkDir FilePath
+  | HiActionChDir FilePath
+  | HiActionCwd
+
+data HiPermission
+  = AllowRead
+  | AllowWrite
+  deriving (Show, Ord, Eq)
+
+data PermissionException
+  = PermissionRequired HiPermission
+  deriving (Show)
+
+class Monad m => HiMonad m where
+  runAction :: HiAction -> m HiValue
+
+instance Exception PermissionException
 
 funcInfo :: HiFun -> (Int, Text)
 funcInfo HiFunAdd = (2, "add")

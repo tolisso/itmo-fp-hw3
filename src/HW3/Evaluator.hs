@@ -8,28 +8,30 @@ import qualified Codec.Serialise as Ser
 import Control.Applicative (liftA2)
 import Control.Monad.Except
 import Control.Monad.Identity
+import Control.Monad.Reader (ReaderT)
 import qualified Data.ByteString as B
 import Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
 import qualified Data.Foldable as F
 import Data.Ratio (denominator, numerator)
 import Data.Semigroup (Semigroup (stimes))
 import qualified Data.Sequence as S
+import Data.Set (Set)
 import Data.Text as T
 import Data.Text.Encoding as Enc
 import Data.Text.Encoding.Error (UnicodeException)
 import qualified Data.Word as W
 import HW3.Base
 
-type Status = ExceptT HiError Identity
+type Status = ExceptT HiError
 
-eval :: HiExpr -> Either HiError HiValue
+eval :: HiMonad m => HiExpr -> m (Either HiError HiValue)
 eval ex = convertM $ evalM ex
 
-convertM :: Status HiValue -> Either HiError HiValue
-convertM (ExceptT (Identity v)) = v
+convertM :: HiMonad m => Status m HiValue -> m (Either HiError HiValue)
+convertM (ExceptT val) = val
 
 -- `eval`'s in-depth realization with
-evalM :: HiExpr -> Status HiValue
+evalM :: HiMonad m => HiExpr -> Status m HiValue
 evalM (HiExprValue v) = return v
 evalM (HiExprApply f args) = do
   fr <- evalM f
@@ -46,17 +48,17 @@ reduced (HiValueFunction HiFunAnd) = False
 reduced (HiValueFunction HiFunOr) = False
 reduced _ = True
 
-toBool' :: HiValue -> Status Bool
+toBool' :: HiMonad m => HiValue -> Status m Bool
 toBool' (HiValueBool True) = return True
 toBool' (HiValueBool False) = return False
 toBool' _ = throwError HiErrorInvalidArgument
 
-toBool :: HiExpr -> Status Bool
+toBool :: HiMonad m => HiExpr -> Status m Bool
 toBool x = do
   xr <- evalM x
   toBool' $ xr
 
-applyFull :: HiValue -> [HiExpr] -> Status HiValue
+applyFull :: HiMonad m => HiValue -> [HiExpr] -> Status m HiValue
 -- if
 applyFull (HiValueFunction HiFunIf) [condExpr, a, b] = do
   cond <- evalM condExpr
@@ -82,7 +84,7 @@ applyFull (HiValueFunction f) args = do
   throwError HiErrorInvalidArgument
 applyFull _ _ = throwError HiErrorInvalidFunction
 
-apply :: HiValue -> [HiValue] -> Status HiValue
+apply :: HiMonad m => HiValue -> [HiValue] -> Status m HiValue
 -- number
 apply (HiValueFunction HiFunAdd) [(HiValueNumber a), (HiValueNumber b)] =
   return (HiValueNumber (a + b))
@@ -260,7 +262,7 @@ apply (HiValueFunction f) args = do
 apply _ _ = throwError HiErrorInvalidFunction
 
 -- assertion
-check :: Bool -> HiError -> Status ()
+check :: HiMonad m => Bool -> HiError -> Status m ()
 check cond err =
   unless cond $ throwError err
 
@@ -291,11 +293,16 @@ equals _ _ = False
 ngz :: HiValue -> HiValue -> Bool
 ngz a b = (lz a b) || (equals a b)
 
-getInt :: Rational -> Status Int
+getInt :: HiMonad m => Rational -> Status m Int
 getInt n | denominator n /= 1 = throwError HiErrorInvalidArgument
 getInt n = return . fromIntegral . numerator $ n
 
-nTimes :: Semigroup a => Rational -> a -> (a -> HiValue) -> Status HiValue
+nTimes ::
+  (HiMonad m, Semigroup a) =>
+  Rational ->
+  a ->
+  (a -> HiValue) ->
+  Status m HiValue
 nTimes n s val = do
   x <- getInt n
   return
@@ -319,13 +326,14 @@ checkBoundsByte arr = checkBounds $ B.length arr
 
 -- abstraction converting `Rational` borders to `Int` and apply last argument function
 slice ::
+  HiMonad m =>
   t -> -- what to slice
   Rational -> -- l rational
   Rational -> -- r rational
   (t -> Int) -> -- length
   (Int -> Int -> t -> t) -> -- func to get slice with int borders
-  (t -> Status HiValue) -> -- func to get slice with int borders
-  Status HiValue
+  (t -> Status m HiValue) -> -- func to get slice with int borders
+  Status m HiValue
 slice arr a b len getSlice wrap = do
   x <- getInt a
   y <- getInt b
@@ -349,7 +357,7 @@ subseq l r t = S.drop l . S.take r $ t
 subbyte :: Int -> Int -> B.ByteString -> B.ByteString
 subbyte l r t = B.drop l . B.take r $ t
 
-toWord8 :: HiValue -> Status W.Word8
+toWord8 :: HiMonad m => HiValue -> Status m W.Word8
 toWord8 (HiValueNumber n) = do
   i <- getInt n
   if 0 <= i && i <= 255
