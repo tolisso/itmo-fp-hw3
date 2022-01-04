@@ -1,11 +1,11 @@
-{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
-
 module HW3.Hio where
 
 import Control.Exception (throw)
 import qualified Control.Monad.Cont as Control.Monad
 import qualified Data.ByteString as B
 import Data.Set
+import Data.Text (pack)
+import Data.Text.Encoding as Enc
 import HW3.Base
 import System.Directory
 
@@ -38,9 +38,16 @@ instance HiMonad HIO where
     path <- getCurrentDirectory
     return . HiValueString . pack $ path
   runAction (HiActionRead file) = runAction' AllowRead $ do
-    path <- B.readFile file
-    return . HiValueString . pack $ path
+    bt <- B.readFile $ file
+    return $ case Enc.decodeUtf8' bt of
+      (Left _) -> HiValueBytes bt
+      (Right t) -> HiValueString t
   runAction (HiActionWrite file bs) = runAction' AllowWrite $ do
-    path <- writeFile file (toUtf8 bs)
-    return . HiValueString . pack $ path
-  runAction _ = undefined
+    path <- B.writeFile file bs
+    return HiValueNull
+  runAction (HiActionMkDir path) = runAction' AllowWrite $ do
+    createDirectory path
+    return HiValueNull
+  runAction (HiActionChDir path) = runAction' AllowWrite $ do
+    setCurrentDirectory path
+    return HiValueNull

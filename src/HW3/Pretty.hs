@@ -53,12 +53,7 @@ prettyValue (HiValueString str) = pretty $ "\"" ++ (unpack str) ++ "\""
 -- list
 prettyValue (HiValueList arr) =
   pretty "[ "
-    <> ( F.fold
-           . L.intersperse (pretty ", ")
-           . Prelude.map (prettyValue)
-           . F.toList
-           $ arr
-       )
+    <> prettyArgs (F.toList arr)
     <> pretty " ]"
 -- bytes
 prettyValue (HiValueBytes str) =
@@ -75,6 +70,30 @@ prettyValue (HiValueBytes str) =
            $ str
        )
     <> pretty " #]"
+prettyValue (HiValueAction (HiActionRead path)) =
+  prettyAction "read" [str (path)]
+prettyValue (HiValueAction (HiActionWrite path sb)) =
+  prettyAction "write" [str path, HiValueBytes sb]
+prettyValue (HiValueAction (HiActionMkDir path)) =
+  prettyAction "mkdir" [str path]
+prettyValue (HiValueAction (HiActionChDir path)) =
+  prettyAction "cd" [str path]
+prettyValue (HiValueAction HiActionCwd) = pretty "cwd"
+
+prettyAction :: String -> [HiValue] -> Doc AnsiStyle
+prettyAction name args =
+  pretty name
+    <> pretty "("
+    <> prettyArgs args
+    <> pretty ")"
+
+str s = HiValueString (pack s)
+
+prettyArgs args =
+  F.fold
+    . L.intersperse (pretty ", ")
+    . Prelude.map (prettyValue)
+    $ args
 
 isPow10 :: Rational -> Bool
 isPow10 a = isInf (fromRationalRepetendUnlimited a)

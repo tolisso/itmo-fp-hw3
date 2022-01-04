@@ -12,6 +12,7 @@ import GHC.IO.Handle
 import GHC.IO.Handle.FD
 import HW3.Base
 import HW3.Evaluator
+import HW3.Hio
 import HW3.Parser
 import HW3.Pretty
 import Lib
@@ -25,13 +26,19 @@ parser = do
   eof
   return e
 
+permissions = fromList [AllowRead, AllowWrite]
+
 getResult :: String -> InputT IO ()
 getResult input = eval' (parse parser "aba" (pack input))
   where
     eval' :: Either (ParseErrorBundle Text Void) HiExpr -> InputT IO ()
     eval' (Left s) = outputStrLn . show $ s
     eval' (Right v) = do
-      x <- liftIO $ runHIO (eval v :: HIO (Either HiError HiValue)) (fromList [])
+      x <-
+        liftIO $
+          runHIO
+            (eval v :: HIO (Either HiError HiValue))
+            permissions
       either printRes printRes (prettyValue <$> x)
       where
         printRes v = outputStrLn . show $ v

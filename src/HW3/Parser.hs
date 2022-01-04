@@ -130,9 +130,12 @@ binaryL = mkBinaryX InfixL
 
 binaryR = mkBinaryX InfixR
 
+action = Postfix ((\s -> HiExprRun s) <$ spaced "!")
+
 table :: [[Operator Parser HiExpr]]
 table =
-  [ [ binaryL "*" HiFunMul,
+  [ [action],
+    [ binaryL "*" HiFunMul,
       binaryL "/" HiFunDiv
     ],
     [ binaryL "+" HiFunAdd,

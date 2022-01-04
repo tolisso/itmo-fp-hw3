@@ -40,6 +40,11 @@ evalM (HiExprApply f args) = do
       values <- traverse (\v -> evalM v) args
       apply fr values
     else applyFull fr args
+evalM (HiExprRun exp) = do
+  x <- evalM exp
+  case x of
+    (HiValueAction act) -> lift $ runAction act
+    _ -> throwError HiErrorInvalidArgument
 
 -- determine in `evalM` what we need to use, `apply` or `applyFull`
 reduced :: HiValue -> Bool
@@ -221,6 +226,8 @@ apply (HiValueFunction HiFunDeserialise) [HiValueBytes bs] = do
 apply (HiValueFunction HiFunDecodeUtf8) [HiValueBytes bt] = do
   let res = Enc.decodeUtf8' bt
   return . decodeResToValue $ res
+apply (HiValueFunction HiFunEncodeUtf8) [HiValueString t] = do
+  return . HiValueBytes . Enc.encodeUtf8 $ t
 apply (HiValueFunction HiFunZip) [HiValueBytes bt] =
   do
     return
@@ -255,6 +262,15 @@ apply (HiValueBytes bt) [HiValueNumber a, HiValueNumber b] =
   slice bt a b B.length subbyte $
     \bt -> return . HiValueBytes $ bt
 apply (HiValueBytes _) _ = throwError HiErrorInvalidArgument
+-- io actions
+apply (HiValueFunction HiFunRead) [HiValueString str] =
+  return . HiValueAction . HiActionRead . unpack $ str
+apply (HiValueFunction HiFunWrite) [HiValueString str, HiValueBytes bt] =
+  return . HiValueAction $ HiActionWrite (unpack str) bt
+apply (HiValueFunction HiFunChDir) [HiValueString str] =
+  return . HiValueAction . HiActionChDir . unpack $ str
+apply (HiValueFunction HiFunMkDir) [HiValueString str] =
+  return . HiValueAction . HiActionMkDir . unpack $ str
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch

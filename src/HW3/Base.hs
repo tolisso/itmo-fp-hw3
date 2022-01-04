@@ -53,6 +53,11 @@ data HiFun
   | HiFunUnzip
   | HiFunSerialise
   | HiFunDeserialise
+  | -- actions
+    HiFunRead
+  | HiFunWrite
+  | HiFunMkDir
+  | HiFunChDir
   deriving (Show, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -65,6 +70,7 @@ data HiValue
   | HiValueString Text
   | HiValueList (Seq HiValue)
   | HiValueBytes B.ByteString
+  | HiValueAction HiAction
   deriving (Show)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -72,6 +78,7 @@ data HiValue
 data HiExpr
   = HiExprValue HiValue
   | HiExprApply HiExpr [HiExpr]
+  | HiExprRun HiExpr
   deriving (Show)
 
 data HiError
@@ -87,6 +94,9 @@ data HiAction
   | HiActionMkDir FilePath
   | HiActionChDir FilePath
   | HiActionCwd
+  deriving (Show)
+  deriving stock (Generic)
+  deriving anyclass (Serialise)
 
 data HiPermission
   = AllowRead
@@ -133,6 +143,10 @@ funcInfo HiFunZip = (1, "zip")
 funcInfo HiFunUnzip = (1, "unzip")
 funcInfo HiFunSerialise = (1, "serialize")
 funcInfo HiFunDeserialise = (1, "deserialize")
+funcInfo HiFunRead = (1, "read")
+funcInfo HiFunWrite = (2, "write")
+funcInfo HiFunChDir = (1, "cd")
+funcInfo HiFunMkDir = (1, "mkdir")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -171,7 +185,11 @@ funcs =
     HiFunZip,
     HiFunUnzip,
     HiFunSerialise,
-    HiFunDeserialise
+    HiFunDeserialise,
+    HiFunRead,
+    HiFunWrite,
+    HiFunChDir,
+    HiFunMkDir
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
@@ -183,6 +201,7 @@ isDifferentValues (HiValueNull) (HiValueNull) = False
 isDifferentValues _ _ = True
 
 valPriority :: HiValue -> Int
+valPriority (HiValueAction _) = 8
 valPriority (HiValueBytes _) = 7
 valPriority (HiValueList _) = 6
 valPriority (HiValueString _) = 5
