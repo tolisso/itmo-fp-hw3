@@ -72,6 +72,11 @@ pList = do
   x <- between (spaced "[") (spaced "]") (sepBy oprExpr (spaced ","))
   return $ HiExprApply (HiExprValue . HiValueFunction $ HiFunList) x
 
+pCwd :: Parser HiExpr
+pCwd = do
+  spaced "cwd"
+  return . HiExprValue . HiValueAction $ HiActionCwd
+
 hexnumber :: Parser W.Word8
 hexnumber = do
   x <- hexDigitChar
@@ -113,6 +118,7 @@ simpleExpr =
     <|> pNull
     <|> pBytes
     <|> pList
+    <|> pCwd
 
 expr :: Parser HiExpr
 expr = do
