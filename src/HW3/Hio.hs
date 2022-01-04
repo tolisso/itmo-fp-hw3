@@ -1,6 +1,6 @@
 module HW3.Hio where
 
-import Control.Exception (throw)
+import Control.Exception (throw, throwIO)
 import qualified Control.Monad.Cont as Control.Monad
 import qualified Data.ByteString as B
 import Data.Set
@@ -31,7 +31,7 @@ runAction' :: HiPermission -> IO HiValue -> HIO HiValue
 runAction' perm io = HIO $ \s ->
   if perm `member` s
     then io
-    else throw (PermissionRequired perm)
+    else throwIO (PermissionRequired perm)
 
 instance HiMonad HIO where
   runAction HiActionCwd = runAction' AllowRead $ do
