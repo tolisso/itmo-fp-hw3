@@ -48,6 +48,6 @@ instance HiMonad HIO where
   runAction (HiActionMkDir path) = runAction' AllowWrite $ do
     createDirectory path
     return HiValueNull
-  runAction (HiActionChDir path) = runAction' AllowWrite $ do
+  runAction (HiActionChDir path) = runAction' AllowRead $ do
     setCurrentDirectory path
     return HiValueNull

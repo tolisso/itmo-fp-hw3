@@ -163,17 +163,19 @@ apply (HiValueFunction HiFunList) arr =
 apply (HiValueFunction HiFunReverse) [HiValueList arr] =
   return . HiValueList . S.reverse $ arr
 apply (HiValueFunction HiFunFold) [(HiValueFunction f), HiValueList arr] = do
-  check (not . S.null $ arr) HiErrorInvalidArgument
-  Prelude.foldl1
-    ( \x y -> do
-        xr <- x
-        yr <- y
-        evalM $
-          HiExprApply
-            (HiExprValue . HiValueFunction $ f)
-            [HiExprValue xr, HiExprValue yr]
-    )
-    (Prelude.map return (F.toList arr))
+  if S.null $ arr
+    then return $ HiValueNull
+    else
+      Prelude.foldl1
+        ( \x y -> do
+            xr <- x
+            yr <- y
+            evalM $
+              HiExprApply
+                (HiExprValue . HiValueFunction $ f)
+                [HiExprValue xr, HiExprValue yr]
+        )
+        (Prelude.map return (F.toList arr))
 apply (HiValueFunction HiFunRange) [(HiValueNumber x), (HiValueNumber y)] =
   return
     . HiValueList
