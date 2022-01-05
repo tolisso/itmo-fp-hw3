@@ -6,6 +6,7 @@ import qualified Data.ByteString as B
 import Data.Set
 import Data.Text (pack)
 import Data.Text.Encoding as Enc
+import Data.Time (getCurrentTime)
 import HW3.Base
 import System.Directory
 
@@ -51,3 +52,6 @@ instance HiMonad HIO where
   runAction (HiActionChDir path) = runAction' AllowRead $ do
     setCurrentDirectory path
     return HiValueNull
+  runAction (HiActionNow) = runAction' AllowTime $ do
+    x <- getCurrentTime
+    return . HiValueTime $ x

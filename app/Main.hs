@@ -26,7 +26,7 @@ parser = do
   eof
   return e
 
-permissions = fromList [AllowRead, AllowWrite]
+permissions = fromList [AllowRead, AllowWrite, AllowTime]
 
 getResult :: String -> InputT IO ()
 getResult input = eval' (parse parser "aba" (pack input))

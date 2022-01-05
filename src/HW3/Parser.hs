@@ -77,6 +77,11 @@ pCwd = do
   spaced "cwd"
   return . HiExprValue . HiValueAction $ HiActionCwd
 
+pNow :: Parser HiExpr
+pNow = do
+  spaced "now"
+  return . HiExprValue . HiValueAction $ HiActionNow
+
 hexnumber :: Parser W.Word8
 hexnumber = do
   x <- hexDigitChar
@@ -119,6 +124,7 @@ simpleExpr =
     <|> pBytes
     <|> pList
     <|> pCwd
+    <|> pNow
 
 expr :: Parser HiExpr
 expr = do

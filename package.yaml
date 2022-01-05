@@ -35,6 +35,7 @@ dependencies:
   - serialise
   - zlib
   - directory
+  - time
 
 library:
   source-dirs: src
@@ -62,6 +63,7 @@ executables:
       - serialise
       - zlib
       - directory
+      - time
 
 tests:
   hw3-stack-test:

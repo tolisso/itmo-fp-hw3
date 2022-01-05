@@ -70,6 +70,7 @@ prettyValue (HiValueBytes str) =
            $ str
        )
     <> pretty " #]"
+-- action
 prettyValue (HiValueAction (HiActionRead path)) =
   prettyAction "read" [str (path)]
 prettyValue (HiValueAction (HiActionWrite path sb)) =
@@ -79,6 +80,12 @@ prettyValue (HiValueAction (HiActionMkDir path)) =
 prettyValue (HiValueAction (HiActionChDir path)) =
   prettyAction "cd" [str path]
 prettyValue (HiValueAction HiActionCwd) = pretty "cwd"
+prettyValue (HiValueAction HiActionNow) = pretty "now"
+-- time
+prettyValue (HiValueTime time) =
+  pretty "parse-time(\""
+    <> pretty (show time)
+    <> pretty "\")"
 
 prettyAction :: String -> [HiValue] -> Doc AnsiStyle
 prettyAction name args =

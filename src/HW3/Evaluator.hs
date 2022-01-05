@@ -21,6 +21,7 @@ import Data.Text.Encoding as Enc
 import Data.Text.Encoding.Error (UnicodeException)
 import qualified Data.Word as W
 import HW3.Base
+import Text.Read (readMaybe)
 
 type Status = ExceptT HiError
 
@@ -258,7 +259,7 @@ apply (HiValueBytes bt) [HiValueNumber n] =
     x <- getInt n
     return $
       if checkBoundsByte bt x
-        then HiValueBytes . B.singleton . (`B.index` x) $ bt
+        then HiValueNumber . fromInteger . toInteger . (`B.index` x) $ bt
         else HiValueNull
 apply (HiValueBytes bt) [HiValueNumber a, HiValueNumber b] =
   slice bt a b B.length subbyte $
@@ -273,6 +274,11 @@ apply (HiValueFunction HiFunChDir) [HiValueString str] =
   return . HiValueAction . HiActionChDir . unpack $ str
 apply (HiValueFunction HiFunMkDir) [HiValueString str] =
   return . HiValueAction . HiActionMkDir . unpack $ str
+-- time
+apply (HiValueFunction HiFunParseTime) [HiValueString t] =
+  case readMaybe (unpack t) of
+    (Nothing) -> throwError HiErrorInvalidArgument
+    (Just t) -> return . HiValueTime $ t
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -323,10 +329,13 @@ nTimes ::
   Status m HiValue
 nTimes n s val = do
   x <- getInt n
-  return
-    . val
-    . stimes x
-    $ s
+  if x <= 0
+    then throwError HiErrorInvalidArgument
+    else
+      return
+        . val
+        . stimes x
+        $ s
 
 checkBounds :: Int -> Int -> Bool
 checkBounds _ n | n < 0 = False

@@ -11,6 +11,7 @@ import qualified Data.ByteString as B
 import Data.Sequence (Seq)
 import Data.Set (Set)
 import Data.Text
+import qualified Data.Time as T
 import qualified GHC.Base as Control.Monad
 import GHC.Generics (Generic)
 import GHC.Natural
@@ -58,6 +59,8 @@ data HiFun
   | HiFunWrite
   | HiFunMkDir
   | HiFunChDir
+  | -- time
+    HiFunParseTime
   deriving (Show, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -71,6 +74,7 @@ data HiValue
   | HiValueList (Seq HiValue)
   | HiValueBytes B.ByteString
   | HiValueAction HiAction
+  | HiValueTime T.UTCTime
   deriving (Show)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -94,6 +98,7 @@ data HiAction
   | HiActionMkDir FilePath
   | HiActionChDir FilePath
   | HiActionCwd
+  | HiActionNow
   deriving (Show)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -101,6 +106,7 @@ data HiAction
 data HiPermission
   = AllowRead
   | AllowWrite
+  | AllowTime
   deriving (Show, Ord, Eq)
 
 data PermissionException
@@ -147,6 +153,7 @@ funcInfo HiFunRead = (1, "read")
 funcInfo HiFunWrite = (2, "write")
 funcInfo HiFunChDir = (1, "cd")
 funcInfo HiFunMkDir = (1, "mkdir")
+funcInfo HiFunParseTime = (1, "parse-time")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -189,7 +196,8 @@ funcs =
     HiFunRead,
     HiFunWrite,
     HiFunChDir,
-    HiFunMkDir
+    HiFunMkDir,
+    HiFunParseTime
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
@@ -201,6 +209,7 @@ isDifferentValues (HiValueNull) (HiValueNull) = False
 isDifferentValues _ _ = True
 
 valPriority :: HiValue -> Int
+valPriority (HiValueTime _) = 9
 valPriority (HiValueAction _) = 8
 valPriority (HiValueBytes _) = 7
 valPriority (HiValueList _) = 6
