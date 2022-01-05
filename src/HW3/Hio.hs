@@ -4,7 +4,7 @@ import Control.Exception (throw, throwIO)
 import qualified Control.Monad.Cont as Control.Monad
 import qualified Data.ByteString as B
 import Data.Set
-import Data.Text (pack)
+import Data.Text (pack, unpack)
 import Data.Text.Encoding as Enc
 import Data.Time (getCurrentTime)
 import HW3.Base
@@ -61,3 +61,6 @@ instance HiMonad HIO where
   runAction (HiActionRand l r) = HIO $ \s -> do
     rand <- getStdRandom (uniformR (l, r))
     return . HiValueNumber . toRational $ rand
+  runAction (HiActionEcho t) = runAction' AllowWrite $ do
+    putStrLn . unpack $ t
+    return HiValueNull

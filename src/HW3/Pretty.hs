@@ -83,6 +83,8 @@ prettyValue (HiValueAction HiActionCwd) = pretty "cwd"
 prettyValue (HiValueAction HiActionNow) = pretty "now"
 prettyValue (HiValueAction (HiActionRand l r)) =
   prettyAction "rand" [int l, int r]
+prettyValue (HiValueAction (HiActionEcho t)) =
+  prettyAction "echo" [HiValueString t]
 -- time
 prettyValue (HiValueTime time) =
   pretty "parse-time(\""

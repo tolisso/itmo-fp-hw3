@@ -58,6 +58,7 @@ reduced _ = True
 toBool' :: HiMonad m => HiValue -> Status m Bool
 toBool' (HiValueBool True) = return True
 toBool' (HiValueBool False) = return False
+toBool' (HiValueNull) = return False
 toBool' _ = throwError HiErrorInvalidArgument
 
 toBool :: HiMonad m => HiExpr -> Status m Bool
@@ -71,20 +72,22 @@ applyFull (HiValueFunction HiFunIf) [condExpr, a, b] = do
   cond <- evalM condExpr
   applyIf cond
   where
-    applyIf (HiValueBool True) = evalM a
     applyIf (HiValueBool False) = evalM b
-    applyIf _ = throwError HiErrorInvalidArgument
+    applyIf (HiValueNull) = evalM b
+    applyIf _ = evalM a
 -- bool
 applyFull (HiValueFunction HiFunAnd) [a, b] = do
-  ra <- toBool a
-  if (not ra)
-    then return . HiValueBool $ False
-    else evalM b
+  ra <- evalM a
+  case ra of
+    (HiValueBool False) -> return (HiValueBool False)
+    HiValueNull -> return HiValueNull
+    _ -> evalM b
 applyFull (HiValueFunction HiFunOr) [a, b] = do
-  ra <- toBool a
-  if ra
-    then return . HiValueBool $ True
-    else evalM b
+  ra <- evalM a
+  case ra of
+    (HiValueBool False) -> evalM b
+    HiValueNull -> evalM b
+    x -> return x
 -- other
 applyFull (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -278,6 +281,8 @@ apply (HiValueFunction HiFunChDir) [HiValueString str] =
   return . HiValueAction . HiActionChDir . unpack $ str
 apply (HiValueFunction HiFunMkDir) [HiValueString str] =
   return . HiValueAction . HiActionMkDir . unpack $ str
+apply (HiValueFunction HiFunEcho) [HiValueString str] =
+  return . HiValueAction . HiActionEcho $ str
 -- time
 apply (HiValueFunction HiFunParseTime) [HiValueString t] =
   case readMaybe (unpack t) of

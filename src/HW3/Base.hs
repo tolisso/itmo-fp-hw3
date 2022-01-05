@@ -63,6 +63,8 @@ data HiFun
     HiFunParseTime
   | -- random
     HiFunRand
+  | -- io
+    HiFunEcho
   deriving (Show, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -102,6 +104,7 @@ data HiAction
   | HiActionCwd
   | HiActionNow
   | HiActionRand Int Int
+  | HiActionEcho Text
   deriving (Show)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -158,6 +161,7 @@ funcInfo HiFunChDir = (1, "cd")
 funcInfo HiFunMkDir = (1, "mkdir")
 funcInfo HiFunParseTime = (1, "parse-time")
 funcInfo HiFunRand = (2, "rand")
+funcInfo HiFunEcho = (1, "echo")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -202,7 +206,8 @@ funcs =
     HiFunChDir,
     HiFunMkDir,
     HiFunParseTime,
-    HiFunRand
+    HiFunRand,
+    HiFunEcho
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
