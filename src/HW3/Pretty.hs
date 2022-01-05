@@ -81,6 +81,8 @@ prettyValue (HiValueAction (HiActionChDir path)) =
   prettyAction "cd" [str path]
 prettyValue (HiValueAction HiActionCwd) = pretty "cwd"
 prettyValue (HiValueAction HiActionNow) = pretty "now"
+prettyValue (HiValueAction (HiActionRand l r)) =
+  prettyAction "rand" [int l, int r]
 -- time
 prettyValue (HiValueTime time) =
   pretty "parse-time(\""
@@ -95,6 +97,8 @@ prettyAction name args =
     <> pretty ")"
 
 str s = HiValueString (pack s)
+
+int i = HiValueNumber . toRational $ i
 
 prettyArgs args =
   F.fold

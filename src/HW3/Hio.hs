@@ -9,6 +9,8 @@ import Data.Text.Encoding as Enc
 import Data.Time (getCurrentTime)
 import HW3.Base
 import System.Directory
+import System.Random (getStdRandom, mkStdGen, uniformR)
+import System.Random.Stateful (IOGen (IOGen), IOGenM (IOGenM), Random (randomR), UniformRange (uniformRM), newIOGenM, randomRM)
 
 newtype HIO a = HIO {runHIO :: Set HiPermission -> IO a}
 
@@ -55,3 +57,7 @@ instance HiMonad HIO where
   runAction (HiActionNow) = runAction' AllowTime $ do
     x <- getCurrentTime
     return . HiValueTime $ x
+  runAction (HiActionRand l r) | r < l = runAction (HiActionRand r l)
+  runAction (HiActionRand l r) = HIO $ \s -> do
+    rand <- getStdRandom (uniformR (l, r))
+    return . HiValueNumber . toRational $ rand

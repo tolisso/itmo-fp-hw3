@@ -47,6 +47,7 @@ library
     , parser-combinators
     , prettyprinter
     , prettyprinter-ansi-terminal
+    , random
     , scientific ==0.3.7.0
     , serialise
     , text
@@ -74,6 +75,7 @@ executable hw3-stack-exe
     , parser-combinators
     , prettyprinter
     , prettyprinter-ansi-terminal
+    , random
     , scientific ==0.3.7.0
     , serialise
     , text
@@ -101,6 +103,7 @@ test-suite hw3-stack-test
     , parser-combinators
     , prettyprinter
     , prettyprinter-ansi-terminal
+    , random
     , scientific ==0.3.7.0
     , serialise
     , text

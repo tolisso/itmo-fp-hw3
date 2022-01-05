@@ -36,6 +36,7 @@ dependencies:
   - zlib
   - directory
   - time
+  - random
 
 library:
   source-dirs: src
@@ -64,6 +65,7 @@ executables:
       - zlib
       - directory
       - time
+      - random
 
 tests:
   hw3-stack-test:

@@ -136,33 +136,29 @@ expr = do
 mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
 mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
 
-mkBinaryX inf name f = inf (mkBin f <$ spaced name)
-
-binaryL = mkBinaryX InfixL
-
-binaryR = mkBinaryX InfixR
+mkBinary inf name f = inf (mkBin f <$ spaced name)
 
 action = Postfix ((\s -> HiExprRun s) <$ spaced "!")
 
 table :: [[Operator Parser HiExpr]]
 table =
   [ [action],
-    [ binaryL "*" HiFunMul,
-      binaryL "/" HiFunDiv
+    [ mkBinary InfixL "*" HiFunMul,
+      mkBinary InfixL "/" HiFunDiv
     ],
-    [ binaryL "+" HiFunAdd,
-      binaryL "-" HiFunSub
+    [ mkBinary InfixL "+" HiFunAdd,
+      mkBinary InfixL "-" HiFunSub
     ],
-    [ binaryL "==" HiFunEquals,
-      binaryL ">=" HiFunNotLessThan,
-      binaryL "<=" HiFunGreaterThan,
-      binaryL "/=" HiFunNotEquals,
-      binaryL ">" HiFunGreaterThan,
-      binaryL "<" HiFunLessThan
+    [ mkBinary InfixN "==" HiFunEquals,
+      mkBinary InfixN ">=" HiFunNotLessThan,
+      mkBinary InfixN "<=" HiFunGreaterThan,
+      mkBinary InfixN "/=" HiFunNotEquals,
+      mkBinary InfixN ">" HiFunGreaterThan,
+      mkBinary InfixN "<" HiFunLessThan
     ],
-    [ binaryR "&&" HiFunAnd
+    [ mkBinary InfixR "&&" HiFunAnd
     ],
-    [ binaryR "||" HiFunOr
+    [ mkBinary InfixR "||" HiFunOr
     ]
   ]
 

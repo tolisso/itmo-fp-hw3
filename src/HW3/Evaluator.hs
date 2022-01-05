@@ -289,6 +289,11 @@ apply (HiValueFunction HiFunAdd) [HiValueNumber n, HiValueTime t] =
   addTime t n
 apply (HiValueFunction HiFunSub) [HiValueTime x, HiValueTime y] = do
   return . HiValueNumber . toRational $ diffUTCTime x y
+-- rand
+apply (HiValueFunction HiFunRand) [HiValueNumber x, HiValueNumber y] = do
+  l <- fromInteger <$> getInt x
+  r <- fromInteger <$> getInt y
+  return . HiValueAction $ HiActionRand l r
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
