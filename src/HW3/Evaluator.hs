@@ -19,6 +19,7 @@ import Data.Set (Set)
 import Data.Text as T
 import Data.Text.Encoding as Enc
 import Data.Text.Encoding.Error (UnicodeException)
+import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import qualified Data.Word as W
 import HW3.Base
 import Text.Read (readMaybe)
@@ -142,9 +143,10 @@ apply (HiValueFunction HiFunDiv) [(HiValueString x), (HiValueString y)] =
 -- string slices
 apply (HiValueString s) [(HiValueNumber n)] = do
   x <- getInt n
+  let xi = fromIntegral x
   return $
-    if checkBoundsStr s x
-      then HiValueString . pack $ [T.index s x]
+    if checkBoundsStr s xi
+      then HiValueString . pack $ [T.index s xi]
       else HiValueNull
 apply (HiValueString s) [(HiValueNumber a), (HiValueNumber b)] =
   slice s a b T.length substr $ \str ->
@@ -187,9 +189,10 @@ apply (HiValueFunction HiFunLength) [(HiValueList arr)] =
   return . HiValueNumber . toRational $ S.length arr
 apply (HiValueList arr) [(HiValueNumber i)] = do
   x <- getInt i
+  let xi = fromIntegral x
   return $
-    if checkBoundsSeq arr x
-      then HiValueList . S.singleton $ S.index arr x
+    if checkBoundsSeq arr xi
+      then HiValueList . S.singleton $ S.index arr xi
       else HiValueNull
 apply (HiValueList arr) [(HiValueNumber a), (HiValueNumber b)] =
   slice arr a b S.length subseq $ \seq ->
@@ -257,9 +260,10 @@ apply (HiValueFunction HiFunMul) [HiValueNumber n, HiValueBytes a] =
 apply (HiValueBytes bt) [HiValueNumber n] =
   do
     x <- getInt n
+    let xi = fromIntegral x
     return $
-      if checkBoundsByte bt x
-        then HiValueNumber . fromInteger . toInteger . (`B.index` x) $ bt
+      if checkBoundsByte bt xi
+        then HiValueNumber . fromInteger . toInteger . (`B.index` xi) $ bt
         else HiValueNull
 apply (HiValueBytes bt) [HiValueNumber a, HiValueNumber b] =
   slice bt a b B.length subbyte $
@@ -279,6 +283,12 @@ apply (HiValueFunction HiFunParseTime) [HiValueString t] =
   case readMaybe (unpack t) of
     (Nothing) -> throwError HiErrorInvalidArgument
     (Just t) -> return . HiValueTime $ t
+apply (HiValueFunction HiFunAdd) [HiValueTime t, HiValueNumber n] =
+  addTime t n
+apply (HiValueFunction HiFunAdd) [HiValueNumber n, HiValueTime t] =
+  addTime t n
+apply (HiValueFunction HiFunSub) [HiValueTime x, HiValueTime y] = do
+  return . HiValueNumber . toRational $ diffUTCTime x y
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -317,7 +327,7 @@ equals _ _ = False
 ngz :: HiValue -> HiValue -> Bool
 ngz a b = (lz a b) || (equals a b)
 
-getInt :: HiMonad m => Rational -> Status m Int
+getInt :: HiMonad m => Rational -> Status m Integer
 getInt n | denominator n /= 1 = throwError HiErrorInvalidArgument
 getInt n = return . fromIntegral . numerator $ n
 
@@ -362,8 +372,8 @@ slice ::
   (t -> Status m HiValue) -> -- func to get slice with int borders
   Status m HiValue
 slice arr a b len getSlice wrap = do
-  x <- getInt a
-  y <- getInt b
+  x <- fromIntegral <$> getInt a
+  y <- fromIntegral <$> getInt b
   let l = len arr
   let start' = if x >= 0 then x else x + l
   let end' = if y >= 0 then y else y + l
@@ -405,3 +415,12 @@ compress =
 mulBytes n a = do
   i <- getInt n
   return . HiValueBytes . stimes i $ a
+
+addTime ::
+  HiMonad m =>
+  UTCTime ->
+  Rational ->
+  Status m HiValue
+addTime t n = do
+  i <- getInt n
+  return . HiValueTime $ addUTCTime (fromIntegral i) t
