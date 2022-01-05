@@ -101,10 +101,10 @@ valFunc s n = do
 
 funcName :: Parser HiExpr
 funcName =
-  foldr
-    (\v acc -> valFunc (funcStr v) v <|> acc)
-    pEmpty
-    funcs
+  choice $
+    map
+      (\v -> valFunc (funcStr v) v)
+      funcs
 
 func :: HiExpr -> Parser HiExpr
 func head = do
