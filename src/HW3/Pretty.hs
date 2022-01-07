@@ -53,24 +53,26 @@ prettyValue (HiValueNull) = pretty "null"
 prettyValue (HiValueString str) = pretty $ "\"" ++ (unpack str) ++ "\""
 -- list
 prettyValue (HiValueList arr) =
-  pretty "[ "
-    <> prettyArgs (F.toList arr)
-    <> pretty " ]"
+  if S.null arr
+    then pretty "[ ]"
+    else
+      pretty "[ "
+        <> prettyArgs (F.toList arr)
+        <> pretty " ]"
 -- bytes
 prettyValue (HiValueBytes str) =
   pretty "[# "
     <> ( F.fold
-           . L.intersperse (pretty " ")
            . Prelude.map
              -- Word8 -> enum -> hex string -> Doc (wich pretty returns)
              ( pretty
-                 . (\s -> printf "%02x" s :: String)
+                 . (\s -> printf "%02x " s :: String)
                  . fromEnum
              )
            . B.unpack
            $ str
        )
-    <> pretty " #]"
+    <> pretty "#]"
 -- action
 prettyValue (HiValueAction (HiActionRead path)) =
   prettyAction "read" [str (path)]

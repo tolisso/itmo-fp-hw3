@@ -172,7 +172,7 @@ apply (HiValueFunction HiFunList) arr =
   return . HiValueList . S.fromList $ arr
 apply (HiValueFunction HiFunReverse) [HiValueList arr] =
   return . HiValueList . S.reverse $ arr
-apply (HiValueFunction HiFunFold) [(HiValueFunction f), HiValueList arr] = do
+apply (HiValueFunction HiFunFold) [f, HiValueList arr] = do
   if S.null $ arr
     then return $ HiValueNull
     else
@@ -182,7 +182,7 @@ apply (HiValueFunction HiFunFold) [(HiValueFunction f), HiValueList arr] = do
             yr <- y
             evalM $
               HiExprApply
-                (HiExprValue . HiValueFunction $ f)
+                (HiExprValue f)
                 [HiExprValue xr, HiExprValue yr]
         )
         (Prelude.map return (F.toList arr))
@@ -199,7 +199,7 @@ apply (HiValueList arr) [(HiValueNumber i)] = do
   let xi = fromIntegral x
   return $
     if checkBoundsSeq arr xi
-      then HiValueList . S.singleton $ S.index arr xi
+      then S.index arr xi
       else HiValueNull
 apply (HiValueList arr) [(HiValueNumber a), (HiValueNumber b)] =
   slice arr a b S.length subseq $ \seq ->
@@ -230,8 +230,10 @@ apply (HiValueFunction HiFunUnpackBytes) [(HiValueBytes bs)] =
 apply (HiValueFunction HiFunSerialise) [arg] =
   return . HiValueBytes . toStrict . Ser.serialise $ arg
 apply (HiValueFunction HiFunDeserialise) [HiValueBytes bs] = do
-  let res = Ser.deserialise . fromStrict $ bs
-  return (res :: HiValue)
+  let res = Ser.deserialiseOrFail . fromStrict $ bs
+  return $ case res of
+    (Left _) -> HiValueNull
+    (Right x) -> (x :: HiValue)
 apply (HiValueFunction HiFunDecodeUtf8) [HiValueBytes bt] = do
   let res = Enc.decodeUtf8' bt
   return . decodeResToValue $ res
