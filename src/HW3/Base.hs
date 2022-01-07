@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module HW3.Base where
 
@@ -95,14 +94,14 @@ data HiExpr
   | HiExprApply HiExpr [HiExpr]
   | HiExprRun HiExpr
   | HiExprDict [(HiExpr, HiExpr)]
-  deriving (Show)
+  deriving (Show, Eq)
 
 data HiError
   = HiErrorInvalidArgument
   | HiErrorInvalidFunction
   | HiErrorArityMismatch
   | HiErrorDivideByZero
-  deriving (Show)
+  deriving (Show, Eq)
 
 data HiAction
   = HiActionRead FilePath
@@ -117,7 +116,7 @@ data HiAction
   deriving stock (Generic)
   deriving anyclass (Serialise)
 
-funcInfo :: HiFun -> (Int, Text)
+funcInfo :: HiFun -> (Int, String)
 funcInfo HiFunAdd = (2, "add")
 funcInfo HiFunSub = (2, "sub")
 funcInfo HiFunMul = (2, "mul")
@@ -126,10 +125,10 @@ funcInfo HiFunNot = (1, "not")
 funcInfo HiFunAnd = (2, "and")
 funcInfo HiFunOr = (2, "or")
 funcInfo HiFunLessThan = (2, "less-than")
-funcInfo HiFunGreaterThan = (2, "greater-then")
+funcInfo HiFunGreaterThan = (2, "greater-than")
 funcInfo HiFunEquals = (2, "equals")
-funcInfo HiFunNotLessThan = (2, "not-less-then")
-funcInfo HiFunNotGreaterThan = (2, "not-greater-then")
+funcInfo HiFunNotLessThan = (2, "not-less-than")
+funcInfo HiFunNotGreaterThan = (2, "not-greater-than")
 funcInfo HiFunNotEquals = (2, "not-equals")
 funcInfo HiFunIf = (3, "if")
 funcInfo HiFunLength = (1, "length")
@@ -163,7 +162,7 @@ funcInfo HiFunInvert = (1, "invert")
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
 
-funcStr :: HiFun -> Text
+funcStr :: HiFun -> String
 funcStr = snd . funcInfo
 
 funcs :: [HiFun]
@@ -212,11 +211,16 @@ funcs =
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
-isDifferentValues (HiValueNumber _) (HiValueNumber _) = False
-isDifferentValues (HiValueFunction _) (HiValueFunction _) = False
-isDifferentValues (HiValueString _) (HiValueString _) = False
 isDifferentValues (HiValueBool _) (HiValueBool _) = False
+isDifferentValues (HiValueAction _) (HiValueAction _) = False
+isDifferentValues (HiValueBytes _) (HiValueBytes _) = False
+isDifferentValues (HiValueDict _) (HiValueDict _) = False
+isDifferentValues (HiValueFunction _) (HiValueFunction _) = False
+isDifferentValues (HiValueList _) (HiValueList _) = False
 isDifferentValues (HiValueNull) (HiValueNull) = False
+isDifferentValues (HiValueNumber _) (HiValueNumber _) = False
+isDifferentValues (HiValueString _) (HiValueString _) = False
+isDifferentValues (HiValueTime _) (HiValueTime _) = False
 isDifferentValues _ _ = True
 
 valPriority :: HiValue -> Int

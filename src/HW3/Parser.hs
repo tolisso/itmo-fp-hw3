@@ -18,15 +18,15 @@ import Text.Megaparsec
 import Text.Megaparsec.Char as C
 import Text.Megaparsec.Char.Lexer as L
 
-type Parser = Parsec Void Text
+type Parser = Parsec Void String
 
-spaced :: Text -> Parser ()
+spaced :: String -> Parser ()
 spaced s = do
   string s
   C.space
   return ()
 
-spacedStr :: Text -> Parser Text
+spacedStr :: String -> Parser String
 spacedStr s = do
   x <- string s
   C.space
@@ -96,7 +96,7 @@ pBytes = do
   x <- between (spaced "[#") (spaced "#]") (many hexnumber)
   return . HiExprValue . HiValueBytes . B.pack $ x
 
-valFunc :: Text -> HiFun -> Parser HiExpr
+valFunc :: String -> HiFun -> Parser HiExpr
 valFunc s n = do
   spaced s
   return $ HiExprValue (HiValueFunction n)
@@ -158,6 +158,8 @@ expr = do
 mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
 mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
 
+mkBinaryNotEnding inf name f ch = inf (mkBin f <$ try (spaced name <* notFollowedBy ch))
+
 mkBinary inf name f = inf (mkBin f <$ spaced name)
 
 action = Postfix ((\s -> HiExprRun s) <$ spaced "!")
@@ -166,14 +168,14 @@ table :: [[Operator Parser HiExpr]]
 table =
   [ [action],
     [ mkBinary InfixL "*" HiFunMul,
-      mkBinary InfixL "/" HiFunDiv
+      mkBinaryNotEnding InfixL "/" HiFunDiv "="
     ],
     [ mkBinary InfixL "+" HiFunAdd,
       mkBinary InfixL "-" HiFunSub
     ],
     [ mkBinary InfixN "==" HiFunEquals,
       mkBinary InfixN ">=" HiFunNotLessThan,
-      mkBinary InfixN "<=" HiFunGreaterThan,
+      mkBinary InfixN "<=" HiFunNotGreaterThan,
       mkBinary InfixN "/=" HiFunNotEquals,
       mkBinary InfixN ">" HiFunGreaterThan,
       mkBinary InfixN "<" HiFunLessThan
@@ -189,3 +191,13 @@ oprExpr = makeExprParser expr table
 
 bracketOprExpr :: Parser HiExpr
 bracketOprExpr = between (spaced "(") (spaced ")") oprExpr
+
+parse' :: Parser HiExpr
+parse' = do
+  spaced ""
+  e <- oprExpr
+  eof
+  return e
+
+parse :: String -> Either (ParseErrorBundle String Void) HiExpr
+parse input = Text.Megaparsec.parse parse' "" input

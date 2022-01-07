@@ -17,21 +17,14 @@ import HW3.Parser
 import HW3.Pretty
 import Lib
 import System.Console.Haskeline
-import Text.Megaparsec
-
-parser :: Parser HiExpr
-parser = do
-  spaced ""
-  e <- oprExpr
-  eof
-  return e
+import qualified Text.Megaparsec as TM
 
 permissions = fromList [AllowRead, AllowWrite, AllowTime]
 
 getResult :: String -> InputT IO ()
-getResult input = eval' (parse parser "aba" (pack input))
+getResult input = eval' (parse input)
   where
-    eval' :: Either (ParseErrorBundle Text Void) HiExpr -> InputT IO ()
+    eval' :: Either (TM.ParseErrorBundle String Void) HiExpr -> InputT IO ()
     eval' (Left s) = outputStrLn . show $ s
     eval' (Right v) = do
       x <-

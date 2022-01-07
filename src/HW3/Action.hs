@@ -69,7 +69,7 @@ data HiPermission
   = AllowRead
   | AllowWrite
   | AllowTime
-  deriving (Show, Ord, Eq)
+  deriving (Show, Ord, Eq, Bounded, Enum)
 
 data PermissionException
   = PermissionRequired HiPermission
