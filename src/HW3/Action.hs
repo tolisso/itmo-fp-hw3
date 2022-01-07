@@ -1,6 +1,6 @@
-module HW3.Hio where
+module HW3.Action where
 
-import Control.Exception (throw, throwIO)
+import Control.Exception (Exception, throw, throwIO)
 import qualified Control.Monad.Cont as Control.Monad
 import qualified Data.ByteString as B
 import Data.Set
@@ -64,3 +64,18 @@ instance HiMonad HIO where
   runAction (HiActionEcho t) = runAction' AllowWrite $ do
     putStrLn . unpack $ t
     return HiValueNull
+
+data HiPermission
+  = AllowRead
+  | AllowWrite
+  | AllowTime
+  deriving (Show, Ord, Eq)
+
+data PermissionException
+  = PermissionRequired HiPermission
+  deriving (Show)
+
+class Monad m => HiMonad m where
+  runAction :: HiAction -> m HiValue
+
+instance Exception PermissionException

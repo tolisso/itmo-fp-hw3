@@ -109,21 +109,6 @@ data HiAction
   deriving stock (Generic)
   deriving anyclass (Serialise)
 
-data HiPermission
-  = AllowRead
-  | AllowWrite
-  | AllowTime
-  deriving (Show, Ord, Eq)
-
-data PermissionException
-  = PermissionRequired HiPermission
-  deriving (Show)
-
-class Monad m => HiMonad m where
-  runAction :: HiAction -> m HiValue
-
-instance Exception PermissionException
-
 funcInfo :: HiFun -> (Int, Text)
 funcInfo HiFunAdd = (2, "add")
 funcInfo HiFunSub = (2, "sub")
