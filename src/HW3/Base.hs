@@ -8,6 +8,7 @@ module HW3.Base where
 import Codec.Serialise (Serialise)
 import Control.Exception (Exception)
 import qualified Data.ByteString as B
+import qualified Data.Map as M
 import Data.Sequence (Seq)
 import Data.Set (Set)
 import Data.Text
@@ -65,6 +66,11 @@ data HiFun
     HiFunRand
   | -- io
     HiFunEcho
+  | -- dict
+    HiFunCount
+  | HiFunKeys
+  | HiFunValues
+  | HiFunInvert
   deriving (Show, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (Serialise)
@@ -79,7 +85,8 @@ data HiValue
   | HiValueBytes B.ByteString
   | HiValueAction HiAction
   | HiValueTime T.UTCTime
-  deriving (Show)
+  | HiValueDict (M.Map HiValue HiValue)
+  deriving (Show, Ord, Eq)
   deriving stock (Generic)
   deriving anyclass (Serialise)
 
@@ -87,6 +94,7 @@ data HiExpr
   = HiExprValue HiValue
   | HiExprApply HiExpr [HiExpr]
   | HiExprRun HiExpr
+  | HiExprDict [(HiExpr, HiExpr)]
   deriving (Show)
 
 data HiError
@@ -105,7 +113,7 @@ data HiAction
   | HiActionNow
   | HiActionRand Int Int
   | HiActionEcho Text
-  deriving (Show)
+  deriving (Show, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (Serialise)
 
@@ -147,6 +155,10 @@ funcInfo HiFunMkDir = (1, "mkdir")
 funcInfo HiFunParseTime = (1, "parse-time")
 funcInfo HiFunRand = (2, "rand")
 funcInfo HiFunEcho = (1, "echo")
+funcInfo HiFunCount = (1, "count")
+funcInfo HiFunKeys = (1, "keys")
+funcInfo HiFunValues = (1, "values")
+funcInfo HiFunInvert = (1, "invert")
 
 numArgs :: HiFun -> Int
 numArgs = fst . funcInfo
@@ -192,7 +204,11 @@ funcs =
     HiFunMkDir,
     HiFunParseTime,
     HiFunRand,
-    HiFunEcho
+    HiFunEcho,
+    HiFunCount,
+    HiFunKeys,
+    HiFunValues,
+    HiFunInvert
   ]
 
 isDifferentValues :: HiValue -> HiValue -> Bool
@@ -204,6 +220,7 @@ isDifferentValues (HiValueNull) (HiValueNull) = False
 isDifferentValues _ _ = True
 
 valPriority :: HiValue -> Int
+valPriority (HiValueDict _) = 10
 valPriority (HiValueTime _) = 9
 valPriority (HiValueAction _) = 8
 valPriority (HiValueBytes _) = 7

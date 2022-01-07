@@ -114,6 +114,18 @@ func head = do
 args :: Parser [HiExpr]
 args = between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
 
+pMapTerm :: Parser (HiExpr, HiExpr)
+pMapTerm = do
+  x <- oprExpr
+  spaced ":"
+  y <- oprExpr
+  return (x, y)
+
+pMap :: Parser HiExpr
+pMap = do
+  vals <- between (spaced "{") (spaced "}") (sepBy pMapTerm (spaced ","))
+  return . HiExprDict $ vals
+
 simpleExpr :: Parser HiExpr
 simpleExpr =
   number
@@ -125,6 +137,7 @@ simpleExpr =
     <|> pList
     <|> pCwd
     <|> pNow
+    <|> pMap
 
 expr :: Parser HiExpr
 expr = do

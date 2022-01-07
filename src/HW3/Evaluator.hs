@@ -10,8 +10,10 @@ import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader (ReaderT)
 import qualified Data.ByteString as B
-import Data.ByteString.Lazy (ByteString, fromStrict, toStrict)
+import Data.ByteString.Lazy (ByteString, fromStrict, toStrict, transpose)
 import qualified Data.Foldable as F
+import Data.List as L
+import qualified Data.Map as M
 import Data.Ratio (denominator, numerator)
 import Data.Semigroup (Semigroup (stimes))
 import qualified Data.Sequence as S
@@ -48,6 +50,10 @@ evalM (HiExprRun exp) = do
   case x of
     (HiValueAction act) -> lift $ runAction act
     _ -> throwError HiErrorInvalidArgument
+evalM (HiExprDict arr) = do
+  xs <- traverse (evalM . fst) $ arr
+  ys <- traverse (evalM . snd) $ arr
+  return . HiValueDict . M.fromList $ Prelude.zip xs ys
 
 -- determine in `evalM` what we need to use, `apply` or `applyFull`
 reduced :: HiValue -> Bool
@@ -159,11 +165,7 @@ apply (HiValueString s) [x, (HiValueNull)] =
   apply (HiValueString s) [x, (HiValueNumber . toRational $ T.length s)]
 apply (HiValueString s) [(HiValueNull), y] =
   apply (HiValueString s) [(HiValueNumber 0), y]
-apply (HiValueString _) args =
-  let sz = Prelude.length args
-   in if sz == 1 || sz == 2
-        then throwError HiErrorInvalidArgument
-        else throwError HiErrorArityMismatch
+apply (HiValueString _) args = argsError args [1, 2]
 -- list
 apply (HiValueFunction HiFunList) arr =
   return . HiValueList . S.fromList $ arr
@@ -211,11 +213,7 @@ apply (HiValueFunction HiFunMul) [(HiValueNumber n), (HiValueList s)] =
   nTimes n s HiValueList
 apply (HiValueFunction HiFunAdd) [(HiValueList x), (HiValueList y)] =
   return . HiValueList $ x S.>< y
-apply (HiValueList _) args =
-  let sz = Prelude.length args
-   in if sz == 1 || sz == 2
-        then throwError HiErrorInvalidArgument
-        else throwError HiErrorArityMismatch
+apply (HiValueList _) args = argsError args [1, 2]
 -- bytes
 apply (HiValueFunction HiFunPackBytes) [(HiValueList arr)] = do
   vals <- traverse (toWord8) (F.toList arr)
@@ -272,7 +270,7 @@ apply (HiValueBytes bt) [HiValueNumber n] =
 apply (HiValueBytes bt) [HiValueNumber a, HiValueNumber b] =
   slice bt a b B.length subbyte $
     \bt -> return . HiValueBytes $ bt
-apply (HiValueBytes _) _ = throwError HiErrorInvalidArgument
+apply (HiValueBytes _) args = argsError args [1, 2]
 -- io actions
 apply (HiValueFunction HiFunRead) [HiValueString str] =
   return . HiValueAction . HiActionRead . unpack $ str
@@ -300,6 +298,21 @@ apply (HiValueFunction HiFunRand) [HiValueNumber x, HiValueNumber y] = do
   l <- fromInteger <$> getInt x
   r <- fromInteger <$> getInt y
   return . HiValueAction $ HiActionRand l r
+-- dict
+apply (HiValueDict m) [k] = do
+  case M.lookup k m of
+    Nothing -> throwError HiErrorInvalidArgument
+    (Just v) -> return v
+apply (HiValueDict _) args = argsError args [1]
+apply (HiValueFunction HiFunKeys) [HiValueDict m] = convertMap m fst
+apply (HiValueFunction HiFunValues) [HiValueDict m] = convertMap m snd
+apply (HiValueFunction HiFunCount) [HiValueString t] =
+  let arr = M.assocs $ F.foldl mapInc M.empty (unpack t)
+   in return
+        . HiValueDict
+        . M.fromList
+        . Prelude.map (\(x, y) -> (HiValueString (pack [x]), intToValue y))
+        $ arr
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -435,3 +448,25 @@ addTime ::
 addTime t n = do
   i <- getInt n
   return . HiValueTime $ addUTCTime (fromIntegral i) t
+
+argsError :: HiMonad m => [HiValue] -> [Int] -> Status m a
+argsError args accepted =
+  let sz = Prelude.length args
+   in if sz `elem` accepted
+        then throwError HiErrorInvalidArgument
+        else throwError HiErrorArityMismatch
+
+convertMap ::
+  HiMonad m =>
+  (M.Map HiValue HiValue) ->
+  ((HiValue, HiValue) -> HiValue) ->
+  Status m HiValue
+convertMap m f =
+  return . HiValueList . S.fromList . Prelude.map f . M.toList $ m
+
+mapInc :: Ord a => M.Map a Int -> a -> M.Map a Int
+mapInc m x = case M.lookup x m of
+  Nothing -> M.insert x 1 m
+  (Just freq) -> M.insert x freq m
+
+intToValue = HiValueNumber . fromInteger . toInteger

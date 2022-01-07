@@ -6,6 +6,7 @@ import qualified Data.ByteString as B
 import Data.Char
 import qualified Data.Foldable as F
 import qualified Data.List as L
+import qualified Data.Map as M
 import Data.Ratio (denominator, numerator)
 import Data.Scientific
 import qualified Data.Sequence as S
@@ -90,6 +91,16 @@ prettyValue (HiValueTime time) =
   pretty "parse-time(\""
     <> pretty (show time)
     <> pretty "\")"
+-- dict
+prettyValue (HiValueDict m) =
+  pretty "{ "
+    <> ( F.fold
+           . L.intersperse (pretty ", ")
+           . Prelude.map (\(a, b) -> prettyValue a <> (pretty ": ") <> prettyValue b)
+           . M.assocs
+           $ m
+       )
+    <> pretty " }"
 
 prettyAction :: String -> [HiValue] -> Doc AnsiStyle
 prettyAction name args =
