@@ -313,6 +313,14 @@ apply (HiValueFunction HiFunCount) [HiValueList l] =
   countToMap (F.toList l) id
 apply (HiValueFunction HiFunCount) [HiValueBytes bt] =
   countToMap (B.unpack $ bt) intToValue
+apply (HiValueFunction HiFunInvert) [HiValueDict m] =
+  return
+    . HiValueDict
+    . M.map (HiValueList . S.fromList)
+    . M.fromListWith (++)
+    . Prelude.map (\(x, y) -> (y, [x]))
+    . M.toList
+    $ m
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -456,13 +464,16 @@ argsError args accepted =
         then throwError HiErrorInvalidArgument
         else throwError HiErrorArityMismatch
 
+mapGetAll :: M.Map k a -> ((k, a) -> b) -> [b]
+mapGetAll m f = Prelude.map f . M.toList $ m
+
 convertMap ::
   HiMonad m =>
   (M.Map HiValue HiValue) ->
   ((HiValue, HiValue) -> HiValue) ->
   Status m HiValue
 convertMap m f =
-  return . HiValueList . S.fromList . Prelude.map f . M.toList $ m
+  return . HiValueList . S.fromList $ mapGetAll m f
 
 mapInc :: Ord a => M.Map a Int -> a -> M.Map a Int
 mapInc m x = case M.lookup x m of

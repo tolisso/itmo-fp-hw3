@@ -5,7 +5,9 @@ module HW3.Parser where
 import Control.Monad (join)
 import Control.Monad.Combinators.Expr
 import qualified Data.ByteString as B
-import Data.Char (digitToInt)
+import Data.Char (digitToInt, isAlpha, isAlphaNum)
+import Data.Foldable (Foldable (fold))
+import qualified Data.List as List
 import Data.Scientific (Scientific, toRealFloat)
 import Data.String
 import Data.Text hiding (foldr, map)
@@ -112,7 +114,9 @@ func head = do
   return $ HiExprApply head body
 
 args :: Parser [HiExpr]
-args = between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
+args =
+  between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
+    <|> parseDotKey
 
 pMapTerm :: Parser (HiExpr, HiExpr)
 pMapTerm = do
@@ -125,6 +129,11 @@ pMap :: Parser HiExpr
 pMap = do
   vals <- between (spaced "{") (spaced "}") (sepBy pMapTerm (spaced ","))
   return . HiExprDict $ vals
+
+parseDotKey = do
+  spaced "."
+  x <- ((:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)) `sepBy` char '-'
+  return [HiExprValue . HiValueString . pack . fold . List.intersperse ['-'] $ x]
 
 simpleExpr :: Parser HiExpr
 simpleExpr =
