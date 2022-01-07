@@ -9,6 +9,7 @@ import Control.Applicative (liftA2)
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader (ReaderT)
+import qualified Data.Bifunctor as Bi
 import qualified Data.ByteString as B
 import Data.ByteString.Lazy (ByteString, fromStrict, toStrict, transpose)
 import qualified Data.Foldable as F
@@ -307,12 +308,11 @@ apply (HiValueDict _) args = argsError args [1]
 apply (HiValueFunction HiFunKeys) [HiValueDict m] = convertMap m fst
 apply (HiValueFunction HiFunValues) [HiValueDict m] = convertMap m snd
 apply (HiValueFunction HiFunCount) [HiValueString t] =
-  let arr = M.assocs $ F.foldl mapInc M.empty (unpack t)
-   in return
-        . HiValueDict
-        . M.fromList
-        . Prelude.map (\(x, y) -> (HiValueString (pack [x]), intToValue y))
-        $ arr
+  countToMap (unpack t) (\x -> HiValueString (pack [x]))
+apply (HiValueFunction HiFunCount) [HiValueList l] =
+  countToMap (F.toList l) id
+apply (HiValueFunction HiFunCount) [HiValueBytes bt] =
+  countToMap (B.unpack $ bt) intToValue
 -- other
 apply (HiValueFunction f) args = do
   check (Prelude.length args == numArgs f) HiErrorArityMismatch
@@ -467,6 +467,16 @@ convertMap m f =
 mapInc :: Ord a => M.Map a Int -> a -> M.Map a Int
 mapInc m x = case M.lookup x m of
   Nothing -> M.insert x 1 m
-  (Just freq) -> M.insert x freq m
+  (Just freq) -> M.insert x (freq + 1) m
 
+intToValue :: Integral a => a -> HiValue
 intToValue = HiValueNumber . fromInteger . toInteger
+
+countToMap :: (Ord a, HiMonad m) => [a] -> (a -> HiValue) -> Status m HiValue
+countToMap arr toKey =
+  let map = M.assocs $ F.foldl mapInc M.empty arr
+   in return
+        . HiValueDict
+        . M.fromList
+        . Prelude.map (Bi.bimap toKey intToValue)
+        $ map
