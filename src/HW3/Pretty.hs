@@ -50,7 +50,7 @@ prettyValue (HiValueFunction f) = pretty $ funcStr f
 -- null
 prettyValue (HiValueNull) = pretty "null"
 -- string
-prettyValue (HiValueString str) = pretty $ "\"" ++ (unpack str) ++ "\""
+prettyValue (HiValueString str) = prettyText str
 -- list
 prettyValue (HiValueList arr) =
   pretty "[ "
@@ -87,9 +87,9 @@ prettyValue (HiValueAction (HiActionEcho t)) =
   prettyAction "echo" [HiValueString t]
 -- time
 prettyValue (HiValueTime time) =
-  pretty "parse-time(\""
-    <> pretty (show time)
-    <> pretty "\")"
+  pretty "parse-time("
+    <> prettyText (pack . show $ time)
+    <> pretty ")"
 -- dict
 prettyValue (HiValueDict m) =
   pretty "{ "
@@ -130,3 +130,6 @@ isPow10 a = isInf (fromRationalRepetendUnlimited a)
   where
     isInf (_, Nothing) = True
     isInf _ = False
+
+prettyText :: Text -> Doc AnsiStyle
+prettyText t = viaShow t
