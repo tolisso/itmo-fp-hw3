@@ -2,10 +2,11 @@
 
 module Main where
 
+import Control.Exception (catch)
 import Control.Monad
 import Control.Monad.Except (ExceptT)
 import Control.Monad.RWS.Lazy (MonadIO (liftIO))
-import Data.Set (fromList)
+import qualified Data.Set as S
 import Data.Text as T
 import Data.Void
 import GHC.IO.Handle
@@ -19,22 +20,33 @@ import Lib
 import System.Console.Haskeline
 import qualified Text.Megaparsec as TM
 
-permissions = fromList [AllowRead, AllowWrite, AllowTime]
+-- feel free to change permissions below
+permissions :: S.Set HiPermission
+permissions = S.fromList [AllowRead, AllowWrite, AllowTime]
 
 getResult :: String -> InputT IO ()
 getResult input = eval' (parse input)
   where
     eval' :: Either (TM.ParseErrorBundle String Void) HiExpr -> InputT IO ()
     eval' (Left s) = outputStrLn . show $ s
-    eval' (Right v) = do
-      x <-
-        liftIO $
-          runHIO
-            (eval v :: HIO (Either HiError HiValue))
-            permissions
-      either printRes printRes (prettyValue <$> x)
+    eval' (Right v) =
+      liftIO $
+        catch
+          body
+          ((\e -> putStrLn $ "IOException: " ++ show e) :: PermissionException -> IO ())
       where
-        printRes v = outputStrLn . show $ v
+        printRes v = show $ v
+        body = do
+          putStrLn ("tree: " ++ show v)
+          x <-
+            runHIO
+              (eval v :: HIO (Either HiError HiValue))
+              permissions
+          putStrLn $
+            either
+              (("error: " ++) . printRes)
+              (("value: " ++) . printRes)
+              (prettyValue <$> x)
 
 main :: IO ()
 main = runInputT defaultSettings loop
