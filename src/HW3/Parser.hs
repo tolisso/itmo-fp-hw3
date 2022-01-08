@@ -137,7 +137,7 @@ pDoAction head = do
 
 parseDotKey = do
   spaced "."
-  x <- ((:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)) `sepBy` char '-'
+  x <- ((:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)) `sepBy1` char '-'
   return [HiExprValue . HiValueString . pack . fold . List.intersperse ['-'] $ x]
 
 simpleExpr :: Parser HiExpr
