@@ -3,6 +3,7 @@ module HW3.Action where
 import Control.Exception (Exception, throw, throwIO)
 import qualified Control.Monad.Cont as Control.Monad
 import qualified Data.ByteString as B
+import qualified Data.Sequence as S
 import Data.Set
 import Data.Text (pack, unpack)
 import Data.Text.Encoding as Enc
@@ -40,11 +41,21 @@ instance HiMonad HIO where
   runAction HiActionCwd = runAction' AllowRead $ do
     path <- getCurrentDirectory
     return . HiValueString . pack $ path
-  runAction (HiActionRead file) = runAction' AllowRead $ do
-    bt <- B.readFile file
-    return $ case Enc.decodeUtf8' bt of
-      (Left _) -> HiValueBytes bt
-      (Right t) -> HiValueString t
+  runAction (HiActionRead path) = runAction' AllowRead $ do
+    isFile <- doesFileExist path
+    if isFile
+      then do
+        bt <- B.readFile path
+        return $ case Enc.decodeUtf8' bt of
+          (Left _) -> HiValueBytes bt
+          (Right t) -> HiValueString t
+      else do
+        dirs <- listDirectory path
+        return
+          . HiValueList
+          . S.fromList
+          . Prelude.map (HiValueString . pack)
+          $ dirs
   runAction (HiActionWrite file bs) = runAction' AllowWrite $ do
     B.writeFile file bs
     return HiValueNull
