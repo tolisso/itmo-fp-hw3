@@ -268,11 +268,15 @@ apply (HiValueBytes bt) [HiValueNumber n] =
     let xi = fromIntegral x
     return $
       if checkBoundsByte bt xi
-        then HiValueNumber . fromInteger . toInteger . (`B.index` xi) $ bt
+        then HiValueNumber . fromIntegral . (`B.index` xi) $ bt
         else HiValueNull
 apply (HiValueBytes bt) [HiValueNumber a, HiValueNumber b] =
   slice bt a b B.length subbyte $
     \bt -> return . HiValueBytes $ bt
+apply (HiValueBytes bt) [HiValueNull, y] =
+  apply (HiValueBytes bt) [HiValueNumber 0, y]
+apply (HiValueBytes bt) [x, HiValueNull] =
+  apply (HiValueBytes bt) [x, HiValueNumber . fromIntegral . B.length $ bt]
 apply (HiValueBytes _) args = argsError args [1, 2]
 -- io actions
 apply (HiValueFunction HiFunRead) [HiValueString str] =
@@ -287,9 +291,9 @@ apply (HiValueFunction HiFunEcho) [HiValueString str] =
   return . HiValueAction . HiActionEcho $ str
 -- time
 apply (HiValueFunction HiFunParseTime) [HiValueString t] =
-  case readMaybe (unpack t) of
-    (Nothing) -> throwError HiErrorInvalidArgument
-    (Just t) -> return . HiValueTime $ t
+  return $ case readMaybe (unpack t) of
+    (Nothing) -> HiValueNull
+    (Just t) -> HiValueTime $ t
 apply (HiValueFunction HiFunAdd) [HiValueTime t, HiValueNumber n] =
   addTime t n
 apply (HiValueFunction HiFunAdd) [HiValueNumber n, HiValueTime t] =
@@ -303,9 +307,9 @@ apply (HiValueFunction HiFunRand) [HiValueNumber x, HiValueNumber y] = do
   return . HiValueAction $ HiActionRand l r
 -- dict
 apply (HiValueDict m) [k] = do
-  case M.lookup k m of
-    Nothing -> throwError HiErrorInvalidArgument
-    (Just v) -> return v
+  return $ case M.lookup k m of
+    Nothing -> HiValueNull
+    (Just v) -> v
 apply (HiValueDict _) args = argsError args [1]
 apply (HiValueFunction HiFunKeys) [HiValueDict m] = convertMap m fst
 apply (HiValueFunction HiFunValues) [HiValueDict m] = convertMap m snd
@@ -493,7 +497,7 @@ mapInc m x = case M.lookup x m of
   (Just freq) -> M.insert x (freq + 1) m
 
 intToValue :: Integral a => a -> HiValue
-intToValue = HiValueNumber . fromInteger . toInteger
+intToValue = HiValueNumber . fromIntegral
 
 countToMap :: (Ord a, HiMonad m) => [a] -> (a -> HiValue) -> Status m HiValue
 countToMap arr toKey =

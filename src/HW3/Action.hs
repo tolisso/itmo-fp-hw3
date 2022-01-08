@@ -41,12 +41,12 @@ instance HiMonad HIO where
     path <- getCurrentDirectory
     return . HiValueString . pack $ path
   runAction (HiActionRead file) = runAction' AllowRead $ do
-    bt <- B.readFile $ file
+    bt <- B.readFile file
     return $ case Enc.decodeUtf8' bt of
       (Left _) -> HiValueBytes bt
       (Right t) -> HiValueString t
   runAction (HiActionWrite file bs) = runAction' AllowWrite $ do
-    path <- B.writeFile file bs
+    B.writeFile file bs
     return HiValueNull
   runAction (HiActionMkDir path) = runAction' AllowWrite $ do
     createDirectory path

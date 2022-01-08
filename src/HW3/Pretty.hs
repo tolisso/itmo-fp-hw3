@@ -53,12 +53,9 @@ prettyValue (HiValueNull) = pretty "null"
 prettyValue (HiValueString str) = pretty $ "\"" ++ (unpack str) ++ "\""
 -- list
 prettyValue (HiValueList arr) =
-  if S.null arr
-    then pretty "[ ]"
-    else
-      pretty "[ "
-        <> prettyArgs (F.toList arr)
-        <> pretty " ]"
+  pretty "[ "
+    <> prettyArgs' (Prelude.map prettyValue (F.toList arr))
+    <> pretty "]"
 -- bytes
 prettyValue (HiValueBytes str) =
   pretty "[# "
@@ -96,30 +93,37 @@ prettyValue (HiValueTime time) =
 -- dict
 prettyValue (HiValueDict m) =
   pretty "{ "
-    <> ( F.fold
-           . L.intersperse (pretty ", ")
+    <> ( prettyArgs'
            . Prelude.map (\(a, b) -> prettyValue a <> (pretty ": ") <> prettyValue b)
            . M.assocs
            $ m
        )
-    <> pretty " }"
+    <> pretty "}"
 
 prettyAction :: String -> [HiValue] -> Doc AnsiStyle
 prettyAction name args =
   pretty name
     <> pretty "("
-    <> prettyArgs args
+    <> prettyArgs (Prelude.map prettyValue args)
     <> pretty ")"
 
+str :: String -> HiValue
 str s = HiValueString (pack s)
 
+int :: Real a => a -> HiValue
 int i = HiValueNumber . toRational $ i
 
+prettyArgs :: [Doc AnsiStyle] -> Doc AnsiStyle
 prettyArgs args =
   F.fold
     . L.intersperse (pretty ", ")
-    . Prelude.map (prettyValue)
     $ args
+
+prettyArgs' :: [Doc AnsiStyle] -> Doc AnsiStyle
+prettyArgs' args =
+  if Prelude.null args
+    then pretty ""
+    else prettyArgs args <> pretty " "
 
 isPow10 :: Rational -> Bool
 isPow10 a = isInf (fromRationalRepetendUnlimited a)

@@ -130,6 +130,11 @@ pMap = do
   vals <- between (spaced "{") (spaced "}") (sepBy pMapTerm (spaced ","))
   return . HiExprDict $ vals
 
+pDoAction :: HiExpr -> Parser HiExpr
+pDoAction head = do
+  spaced "!"
+  return . HiExprRun $ head
+
 parseDotKey = do
   spaced "."
   x <- ((:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)) `sepBy` char '-'
@@ -153,7 +158,7 @@ expr = do
   x <- simpleExpr <|> bracketOprExpr
   expr' x
   where
-    expr' head = do { y <- func head; expr' y } <|> return head
+    expr' head = do { y <- func head <|> pDoAction head; expr' y } <|> return head
 
 mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
 mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
@@ -162,12 +167,9 @@ mkBinaryNotEnding inf name f ch = inf (mkBin f <$ try (spaced name <* notFollowe
 
 mkBinary inf name f = inf (mkBin f <$ spaced name)
 
-action = Postfix ((\s -> HiExprRun s) <$ spaced "!")
-
 table :: [[Operator Parser HiExpr]]
 table =
-  [ [action],
-    [ mkBinary InfixL "*" HiFunMul,
+  [ [ mkBinary InfixL "*" HiFunMul,
       mkBinaryNotEnding InfixL "/" HiFunDiv "="
     ],
     [ mkBinary InfixL "+" HiFunAdd,
