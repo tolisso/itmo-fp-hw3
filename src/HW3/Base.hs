@@ -75,9 +75,9 @@ data HiFun
   deriving anyclass (Serialise)
 
 data HiValue
-  = HiValueNumber Rational
+  = HiValueBool Bool
+  | HiValueNumber Rational
   | HiValueFunction HiFun
-  | HiValueBool Bool
   | HiValueNull
   | HiValueString Text
   | HiValueList (Seq HiValue)
@@ -209,28 +209,3 @@ funcs =
     HiFunValues,
     HiFunInvert
   ]
-
-isDifferentValues :: HiValue -> HiValue -> Bool
-isDifferentValues (HiValueBool _) (HiValueBool _) = False
-isDifferentValues (HiValueAction _) (HiValueAction _) = False
-isDifferentValues (HiValueBytes _) (HiValueBytes _) = False
-isDifferentValues (HiValueDict _) (HiValueDict _) = False
-isDifferentValues (HiValueFunction _) (HiValueFunction _) = False
-isDifferentValues (HiValueList _) (HiValueList _) = False
-isDifferentValues (HiValueNull) (HiValueNull) = False
-isDifferentValues (HiValueNumber _) (HiValueNumber _) = False
-isDifferentValues (HiValueString _) (HiValueString _) = False
-isDifferentValues (HiValueTime _) (HiValueTime _) = False
-isDifferentValues _ _ = True
-
-valPriority :: HiValue -> Int
-valPriority (HiValueDict _) = 10
-valPriority (HiValueTime _) = 9
-valPriority (HiValueAction _) = 8
-valPriority (HiValueBytes _) = 7
-valPriority (HiValueList _) = 6
-valPriority (HiValueString _) = 5
-valPriority (HiValueNumber _) = 4
-valPriority (HiValueBool _) = 3
-valPriority (HiValueFunction _) = 2
-valPriority (HiValueNull) = 1

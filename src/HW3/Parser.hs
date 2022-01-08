@@ -115,14 +115,14 @@ func head = do
 
 args :: Parser [HiExpr]
 args =
-  between (spaced "(") (spaced ")") (sepBy oprExpr (spaced ","))
+  between (spaced "(") (spaced ")") (sepBy (oprExpr <?> "argument") (spaced ","))
     <|> parseDotKey
 
 pMapTerm :: Parser (HiExpr, HiExpr)
 pMapTerm = do
-  x <- oprExpr
+  x <- oprExpr <?> "map key"
   spaced ":"
-  y <- oprExpr
+  y <- oprExpr <?> "map value"
   return (x, y)
 
 pMap :: Parser HiExpr
@@ -137,28 +137,35 @@ pDoAction head = do
 
 parseDotKey = do
   spaced "."
-  x <- ((:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)) `sepBy1` char '-'
+  x <- ((:) <$> satisfy isAlpha <*> many (satisfy isAlphaNum)) `sepBy1` char '-' <?> "after dot literal"
   return [HiExprValue . HiValueString . pack . fold . List.intersperse ['-'] $ x]
 
 simpleExpr :: Parser HiExpr
 simpleExpr =
-  number
-    <|> funcName
-    <|> bool
-    <|> pString
-    <|> pNull
-    <|> pBytes
-    <|> pList
-    <|> pCwd
-    <|> pNow
-    <|> pMap
+  choice
+    [ number,
+      funcName,
+      bool,
+      pString,
+      pNull,
+      pBytes,
+      pList,
+      pCwd,
+      pNow,
+      pMap
+    ]
+    <?> "primitive"
 
 expr :: Parser HiExpr
-expr = do
-  x <- simpleExpr <|> bracketOprExpr
-  expr' x
+expr =
+  ( do
+      x <- simpleExpr <|> bracketOprExpr
+      expr' x
+  )
+    <?> "no operators expression"
   where
-    expr' head = do { y <- func head <|> pDoAction head; expr' y } <|> return head
+    expr' head =
+      do { y <- func head <|> pDoAction head; expr' y } <|> return head
 
 mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
 mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
@@ -189,7 +196,7 @@ table =
   ]
 
 oprExpr :: Parser HiExpr
-oprExpr = makeExprParser expr table
+oprExpr = makeExprParser expr table <?> "expression"
 
 bracketOprExpr :: Parser HiExpr
 bracketOprExpr = between (spaced "(") (spaced ")") oprExpr

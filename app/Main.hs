@@ -28,7 +28,7 @@ getResult :: String -> InputT IO ()
 getResult input = eval' (parse input)
   where
     eval' :: Either (TM.ParseErrorBundle String Void) HiExpr -> InputT IO ()
-    eval' (Left s) = outputStrLn . show $ s
+    eval' (Left s) = outputStrLn . TM.errorBundlePretty $ s
     eval' (Right v) =
       liftIO $
         catch

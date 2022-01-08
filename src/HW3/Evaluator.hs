@@ -119,17 +119,17 @@ apply (HiValueFunction HiFunNot) [(HiValueBool a)] =
   return (HiValueBool (not a))
 -- compare
 apply (HiValueFunction HiFunEquals) [a, b] =
-  return . HiValueBool $ equals a b
+  return . HiValueBool $ a == b
 apply (HiValueFunction HiFunNotEquals) [a, b] =
-  return . HiValueBool . not $ (equals a b)
+  return . HiValueBool $ a /= b
 apply (HiValueFunction HiFunLessThan) [a, b] =
-  return . HiValueBool $ lz a b
+  return . HiValueBool $ a < b
 apply (HiValueFunction HiFunNotLessThan) [a, b] =
-  return . HiValueBool . not $ lz a b
+  return . HiValueBool $ a >= b
 apply (HiValueFunction HiFunNotGreaterThan) [a, b] =
-  return . HiValueBool $ ngz a b
+  return . HiValueBool $ a <= b
 apply (HiValueFunction HiFunGreaterThan) [a, b] =
-  return . HiValueBool . not $ ngz a b
+  return . HiValueBool $ a > b
 -- string
 apply (HiValueFunction HiFunLength) [(HiValueString s)] =
   return . HiValueNumber . toRational $ T.length s
@@ -341,43 +341,6 @@ apply _ _ = throwError HiErrorInvalidFunction
 check :: HiMonad m => Bool -> HiError -> Status m ()
 check cond err =
   unless cond $ throwError err
-
--- lower-then
-lz :: HiValue -> HiValue -> Bool
-lz (HiValueAction x) (HiValueAction y) = (x < y)
-lz (HiValueBool x) (HiValueBool y) = (x < y)
-lz (HiValueBytes x) (HiValueBytes y) = (x < y)
-lz (HiValueDict x) (HiValueDict y) = (x < y)
-lz (HiValueFunction x) (HiValueFunction y) = (x < y)
-lz (HiValueList x) (HiValueList y) = (x < y)
-lz (HiValueNull) (HiValueNull) = False
-lz (HiValueNumber x) (HiValueNumber y) = (x < y)
-lz (HiValueString x) (HiValueString y) = x < y
-lz (HiValueTime x) (HiValueTime y) = (x < y)
-lz x y | isDifferentValues x y = (valPriority x) < (valPriority y)
-lz x y =
-  error $
-    "lz didn't initialized for \"" ++ show x
-      ++ "\", \""
-      ++ show y
-      ++ "\""
-
-equals :: HiValue -> HiValue -> Bool
-equals (HiValueAction x) (HiValueAction y) = (x == y)
-equals (HiValueBool x) (HiValueBool y) = (x == y)
-equals (HiValueBytes x) (HiValueBytes y) = (x == y)
-equals (HiValueDict x) (HiValueDict y) = (x == y)
-equals (HiValueFunction x) (HiValueFunction y) = (x == y)
-equals (HiValueList x) (HiValueList y) = (x == y)
-equals (HiValueNull) (HiValueNull) = True
-equals (HiValueNumber x) (HiValueNumber y) = (x == y)
-equals (HiValueString x) (HiValueString y) = (x == y)
-equals (HiValueTime x) (HiValueTime y) = (x == y)
-equals _ _ = False
-
--- not-greater-then
-ngz :: HiValue -> HiValue -> Bool
-ngz a b = (lz a b) || (equals a b)
 
 getInt :: HiMonad m => Rational -> Status m Integer
 getInt n | denominator n /= 1 = throwError HiErrorInvalidArgument
