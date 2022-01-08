@@ -254,6 +254,10 @@ apply (HiValueFunction HiFunUnzip) [HiValueBytes bt] =
     . Zl.decompress
     . fromStrict
     $ bt
+apply (HiValueFunction HiFunLength) [HiValueBytes bt] =
+  return . HiValueNumber . fromIntegral $ B.length bt
+apply (HiValueFunction HiFunReverse) [HiValueBytes bt] =
+  return . HiValueBytes . B.reverse $ bt
 apply (HiValueFunction HiFunAdd) [HiValueBytes a, HiValueBytes b] =
   return
     . HiValueBytes
