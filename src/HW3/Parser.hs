@@ -66,7 +66,7 @@ pNull = do
 pString :: Parser HiExpr
 pString = do
   string "\""
-  x <- manyTill charLiteral (spaced "\"")
+  x <- manyTill charLiteral (try $ spaced "\"")
   return . HiExprValue . HiValueString . pack $ x
 
 pList :: Parser HiExpr
@@ -88,12 +88,15 @@ hexnumber :: Parser W.Word8
 hexnumber = do
   x <- hexDigitChar
   y <- hexDigitChar
-  spaced ""
   return . fromIntegral $ (digitToInt x) * 16 + (digitToInt y)
 
 pBytes :: Parser HiExpr
 pBytes = do
-  x <- between (spaced "[#") (spaced "#]") (many hexnumber)
+  x <-
+    between
+      (spaced "[#")
+      (C.space *> spaced "#]")
+      (sepBy hexnumber (try $ spaced " " <* notFollowedBy (string "#]")))
   return . HiExprValue . HiValueBytes . B.pack $ x
 
 valFunc :: String -> HiFun -> Parser HiExpr

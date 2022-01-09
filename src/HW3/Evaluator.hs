@@ -5,13 +5,14 @@ module HW3.Evaluator where
 import Codec.Compression.GZip (compressLevel)
 import qualified Codec.Compression.Zlib as Zl
 import qualified Codec.Serialise as Ser
+import qualified Codec.Serialise.Encoding as Enc
 import Control.Applicative (liftA2)
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Reader (ReaderT)
 import qualified Data.Bifunctor as Bi
 import qualified Data.ByteString as B
-import Data.ByteString.Lazy (ByteString, fromStrict, toStrict, transpose)
+import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.Foldable as F
 import Data.List as L
 import qualified Data.Map as M
@@ -263,9 +264,9 @@ apply (HiValueFunction HiFunAdd) [HiValueBytes a, HiValueBytes b] =
     . HiValueBytes
     $ B.append a b
 apply (HiValueFunction HiFunMul) [HiValueBytes a, HiValueNumber n] =
-  mulBytes n a
+  nTimes n a HiValueBytes
 apply (HiValueFunction HiFunMul) [HiValueNumber n, HiValueBytes a] =
-  mulBytes n a
+  nTimes n a HiValueBytes
 apply (HiValueBytes bt) [HiValueNumber n] =
   do
     x <- getInt n
@@ -426,10 +427,6 @@ compress =
     Zl.defaultCompressParams
       { compressLevel = Zl.bestCompression
       }
-
-mulBytes n a = do
-  i <- getInt n
-  return . HiValueBytes . stimes i $ a
 
 addTime ::
   HiMonad m =>

@@ -26,7 +26,7 @@ dependencies:
   - text
   - scientific == 0.3.7.0
   - mtl
-  - prettyprinter
+  - prettyprinter == 1.7.1
   - prettyprinter-ansi-terminal
   - haskeline
   - parser-combinators
@@ -60,7 +60,7 @@ executables:
       - haskeline
       - parser-combinators
       - containers
-      - bytestring
+      - bytestring >= 0.10.12.1
       - serialise
       - zlib
       - directory

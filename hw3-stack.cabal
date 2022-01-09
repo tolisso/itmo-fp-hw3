@@ -45,7 +45,7 @@ library
     , megaparsec
     , mtl
     , parser-combinators
-    , prettyprinter
+    , prettyprinter ==1.7.1
     , prettyprinter-ansi-terminal
     , random
     , scientific ==0.3.7.0
@@ -64,7 +64,7 @@ executable hw3-stack-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , bytestring
+    , bytestring >=0.10.12.1
     , containers
     , deepseq
     , directory
@@ -101,7 +101,7 @@ test-suite hw3-stack-test
     , megaparsec
     , mtl
     , parser-combinators
-    , prettyprinter
+    , prettyprinter ==1.7.1
     , prettyprinter-ansi-terminal
     , random
     , scientific ==0.3.7.0

@@ -56,7 +56,7 @@ main = runInputT defaultSettings loop
       minput <- getInputLine "hi> "
       case minput of
         Nothing -> return ()
-        Just "quit" -> return ()
+        Just "q" -> return ()
         Just input -> do
           getResult input
           loop

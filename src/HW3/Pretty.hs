@@ -3,7 +3,6 @@ module HW3.Pretty where
 import Control.Applicative.Combinators (between)
 import qualified Control.Applicative.Combinators as F
 import qualified Data.ByteString as B
-import Data.Char
 import qualified Data.Foldable as F
 import qualified Data.List as L
 import qualified Data.Map as M
