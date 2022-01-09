@@ -170,35 +170,33 @@ expr =
     expr' head =
       do { y <- func head <|> pDoAction head; expr' y } <|> return head
 
-mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
-mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
+mkBinApply :: HiFun -> HiExpr -> HiExpr -> HiExpr
+mkBinApply f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
 
-mkBinaryNotEnding inf name f ch =
-  inf
-    ( mkBin f
-        <$ (try (spaced name <* notFollowedBy ch) <?> "binary operator")
-    )
+mkBinary' opParser inf f = inf (mkBinApply f <$ (opParser <?> "binary operator"))
 
-mkBinary inf name f = inf (mkBin f <$ (spaced name <?> "binary operator"))
+mkBinaryNotEnding ch name = mkBinary' (try (spaced name <* notFollowedBy ch))
+
+mkBinary name = mkBinary' (spaced name)
 
 table :: [[Operator Parser HiExpr]]
 table =
-  [ [ mkBinary InfixL "*" HiFunMul,
-      mkBinaryNotEnding InfixL "/" HiFunDiv "="
+  [ [ mkBinary "*" InfixL HiFunMul,
+      (mkBinaryNotEnding "=") "/" InfixL HiFunDiv
     ],
-    [ mkBinary InfixL "+" HiFunAdd,
-      mkBinary InfixL "-" HiFunSub
+    [ mkBinary "+" InfixL HiFunAdd,
+      mkBinary "-" InfixL HiFunSub
     ],
-    [ mkBinary InfixN "==" HiFunEquals,
-      mkBinary InfixN ">=" HiFunNotLessThan,
-      mkBinary InfixN "<=" HiFunNotGreaterThan,
-      mkBinary InfixN "/=" HiFunNotEquals,
-      mkBinary InfixN ">" HiFunGreaterThan,
-      mkBinary InfixN "<" HiFunLessThan
+    [ mkBinary "==" InfixN HiFunEquals,
+      mkBinary ">=" InfixN HiFunNotLessThan,
+      mkBinary "<=" InfixN HiFunNotGreaterThan,
+      mkBinary "/=" InfixN HiFunNotEquals,
+      mkBinary ">" InfixN HiFunGreaterThan,
+      mkBinary "<" InfixN HiFunLessThan
     ],
-    [ mkBinary InfixR "&&" HiFunAnd
+    [ mkBinary "&&" InfixR HiFunAnd
     ],
-    [ mkBinary InfixR "||" HiFunOr
+    [ mkBinary "||" InfixR HiFunOr
     ]
   ]
 
