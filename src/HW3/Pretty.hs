@@ -60,7 +60,7 @@ prettyValue (HiValueBytes str) =
   pretty "[# "
     <> ( F.fold
            . Prelude.map
-             -- Word8 -> enum -> hex string -> Doc (wich pretty returns)
+             -- Word8 ==> enum ==> hex string ==> Doc (wich pretty returns)
              ( pretty
                  . (\s -> printf "%02x " s :: String)
                  . fromEnum
@@ -106,18 +106,22 @@ prettyAction name args =
     <> prettyArgs (Prelude.map prettyValue args)
     <> pretty ")"
 
+-- wrappers
 str :: String -> HiValue
 str s = HiValueString (pack s)
 
 int :: Real a => a -> HiValue
 int i = HiValueNumber . toRational $ i
 
+-- intersperse ", "
 prettyArgs :: [Doc AnsiStyle] -> Doc AnsiStyle
 prettyArgs args =
   F.fold
     . L.intersperse (pretty ", ")
     $ args
 
+-- `prettyArgs` with additional space for non null `args`
+-- only for beauty
 prettyArgs' :: [Doc AnsiStyle] -> Doc AnsiStyle
 prettyArgs' args =
   if Prelude.null args
@@ -130,5 +134,6 @@ isPow10 a = isInf (fromRationalRepetendUnlimited a)
     isInf (_, Nothing) = True
     isInf _ = False
 
+-- pretty for strings with controll and other characters support
 prettyText :: Text -> Doc AnsiStyle
 prettyText t = viaShow t

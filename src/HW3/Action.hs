@@ -13,6 +13,21 @@ import System.Directory
 import System.Random (getStdRandom, mkStdGen, uniformR)
 import System.Random.Stateful (IOGen (IOGen), IOGenM (IOGenM), Random (randomR), UniformRange (uniformRM), newIOGenM, randomRM)
 
+data HiPermission
+  = AllowRead
+  | AllowWrite
+  | AllowTime
+  deriving (Show, Ord, Eq, Bounded, Enum)
+
+data PermissionException
+  = PermissionRequired HiPermission
+  deriving (Show)
+
+class Monad m => HiMonad m where
+  runAction :: HiAction -> m HiValue
+
+instance Exception PermissionException
+
 newtype HIO a = HIO {runHIO :: Set HiPermission -> IO a}
 
 instance Functor HIO where
@@ -75,18 +90,3 @@ instance HiMonad HIO where
   runAction (HiActionEcho t) = runAction' AllowWrite $ do
     putStrLn . unpack $ t
     return HiValueNull
-
-data HiPermission
-  = AllowRead
-  | AllowWrite
-  | AllowTime
-  deriving (Show, Ord, Eq, Bounded, Enum)
-
-data PermissionException
-  = PermissionRequired HiPermission
-  deriving (Show)
-
-class Monad m => HiMonad m where
-  runAction :: HiAction -> m HiValue
-
-instance Exception PermissionException

@@ -34,6 +34,8 @@ type Status = ExceptT HiError
 eval :: HiMonad m => HiExpr -> m (Either HiError HiValue)
 eval ex = convertM $ evalM ex
 
+-- eval helping function
+-- converting internal monad to external
 convertM :: HiMonad m => Status m HiValue -> m (Either HiError HiValue)
 convertM (ExceptT val) = val
 
@@ -75,6 +77,7 @@ toBool x = do
   xr <- evalM x
   toBool' $ xr
 
+-- eval HiExprApply with evaluated function
 applyFull :: HiMonad m => HiValue -> [HiExpr] -> Status m HiValue
 -- if
 applyFull (HiValueFunction HiFunIf) [condExpr, a, b] = do
@@ -103,6 +106,7 @@ applyFull (HiValueFunction f) args = do
   throwError HiErrorInvalidArgument
 applyFull _ _ = throwError HiErrorInvalidFunction
 
+-- eval HiExprApply with evalueated arguments and functions
 apply :: HiMonad m => HiValue -> [HiValue] -> Status m HiValue
 -- number
 apply (HiValueFunction HiFunAdd) [(HiValueNumber a), (HiValueNumber b)] =
@@ -343,10 +347,12 @@ check :: HiMonad m => Bool -> HiError -> Status m ()
 check cond err =
   unless cond $ throwError err
 
+-- convert Rational to Integer, if it is fractional throw error
 getInt :: HiMonad m => Rational -> Status m Integer
 getInt n | denominator n /= 1 = throwError HiErrorInvalidArgument
 getInt n = return . fromIntegral . numerator $ n
 
+-- stimes for HiValue
 nTimes ::
   (HiMonad m, Semigroup a) =>
   Rational ->
@@ -368,6 +374,7 @@ checkBounds _ n | n < 0 = False
 checkBounds sz n | sz <= n = False
 checkBounds _ _ = True
 
+--follow three function check if index in range
 checkBoundsStr :: Text -> Int -> Bool
 checkBoundsStr s = checkBounds (T.length s)
 
@@ -401,6 +408,7 @@ slice arr a b len getSlice wrap = do
     limit _ b i | b <= i = b
     limit _ _ i = i
 
+-- follow three functions helper functions to get slices
 substr :: Int -> Int -> Text -> Text
 substr l r t = T.drop l . T.take r $ t
 
@@ -410,6 +418,7 @@ subseq l r t = S.drop l . S.take r $ t
 subbyte :: Int -> Int -> B.ByteString -> B.ByteString
 subbyte l r t = B.drop l . B.take r $ t
 
+-- number to word8
 toWord8 :: HiMonad m => HiValue -> Status m W.Word8
 toWord8 (HiValueNumber n) = do
   i <- getInt n
@@ -418,6 +427,7 @@ toWord8 (HiValueNumber n) = do
     else throwError HiErrorInvalidArgument
 toWord8 _ = throwError HiErrorInvalidArgument
 
+-- helper function for utf8 decoder
 decodeResToValue :: Either UnicodeException Text -> HiValue
 decodeResToValue (Left _) = HiValueNull
 decodeResToValue (Right t) = HiValueString t
@@ -437,6 +447,7 @@ addTime t n = do
   i <- getInt n
   return . HiValueTime $ addUTCTime (fromIntegral i) t
 
+-- if args number is accepted, then InvalidArgument, else ArityMismatch
 argsError :: HiMonad m => [HiValue] -> [Int] -> Status m a
 argsError args accepted =
   let sz = Prelude.length args
@@ -447,6 +458,7 @@ argsError args accepted =
 mapGetAll :: M.Map k a -> ((k, a) -> b) -> [b]
 mapGetAll m f = Prelude.map f . M.toList $ m
 
+-- convert map (key, value) pairs by applying `f`
 convertMap ::
   HiMonad m =>
   (M.Map HiValue HiValue) ->
@@ -455,11 +467,13 @@ convertMap ::
 convertMap m f =
   return . HiValueList . S.fromList $ mapGetAll m f
 
+-- increase number of element in counting map
 mapInc :: Ord a => M.Map a Int -> a -> M.Map a Int
 mapInc m x = case M.lookup x m of
   Nothing -> M.insert x 1 m
   (Just freq) -> M.insert x (freq + 1) m
 
+-- wrapper
 intToValue :: Integral a => a -> HiValue
 intToValue = HiValueNumber . fromIntegral
 

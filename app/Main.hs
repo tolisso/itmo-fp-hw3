@@ -24,6 +24,7 @@ import qualified Text.Megaparsec as TM
 permissions :: S.Set HiPermission
 permissions = S.fromList [AllowRead, AllowWrite, AllowTime]
 
+-- process input string
 getResult :: String -> InputT IO ()
 getResult input = eval' (parse input)
   where
@@ -32,21 +33,24 @@ getResult input = eval' (parse input)
     eval' (Right v) =
       liftIO $
         catch
-          body
+          (evalHiExpr v)
           ((\e -> putStrLn $ "IOException: " ++ show e) :: PermissionException -> IO ())
-      where
-        printRes v = show $ v
-        body = do
-          putStrLn ("tree: " ++ show v)
-          x <-
-            runHIO
-              (eval v :: HIO (Either HiError HiValue))
-              permissions
-          putStrLn $
-            either
-              (("error: " ++) . printRes)
-              (("value: " ++) . printRes)
-              (prettyValue <$> x)
+
+-- process HiExpr
+evalHiExpr :: HiExpr -> IO ()
+evalHiExpr v = do
+  putStrLn ("tree: " ++ show v)
+  x <-
+    runHIO
+      (eval v :: HIO (Either HiError HiValue))
+      permissions
+  putStrLn $
+    either
+      (("error: " ++) . printRes)
+      (("value: " ++) . printRes)
+      (prettyValue <$> x)
+  where
+    printRes v = show $ v
 
 main :: IO ()
 main = runInputT defaultSettings loop
