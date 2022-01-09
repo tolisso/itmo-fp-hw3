@@ -173,9 +173,13 @@ expr =
 mkBin :: HiFun -> HiExpr -> HiExpr -> HiExpr
 mkBin f = \x y -> HiExprApply (HiExprValue . HiValueFunction $ f) [x, y]
 
-mkBinaryNotEnding inf name f ch = inf (mkBin f <$ try (spaced name <* notFollowedBy ch))
+mkBinaryNotEnding inf name f ch =
+  inf
+    ( mkBin f
+        <$ (try (spaced name <* notFollowedBy ch) <?> "binary operator")
+    )
 
-mkBinary inf name f = inf (mkBin f <$ spaced name)
+mkBinary inf name f = inf (mkBin f <$ (spaced name <?> "binary operator"))
 
 table :: [[Operator Parser HiExpr]]
 table =
